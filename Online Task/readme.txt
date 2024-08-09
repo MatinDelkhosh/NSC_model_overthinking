@@ -1,0 +1,1 @@
+Online maze task will be written in this directory
