@@ -118,7 +118,7 @@ def main():
     screen_width = infoObject.current_w
     screen_height = infoObject.current_h
 
-    rounds = 10 
+    rounds = 1
     for current_round in range(rounds):
         maze = Maze()
         maze.generate_maze()
