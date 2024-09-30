@@ -1,6 +1,9 @@
 import numpy as np
 from scipy.stats import rv_discrete
 from src.ToPlanOrNotToPlan import *
+from walls_baselines import *
+from environment import *
+from maze import *
 
 def reset_agent_state(Larena, reward_location, batch):
     Nstates = Larena ** 2

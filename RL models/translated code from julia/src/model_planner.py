@@ -3,7 +3,10 @@ from scipy.special import logsumexp
 from random import sample
 from collections import defaultdict
 from scipy.stats import rv_discrete
-from src.ToPlanOrNotToPlan import *
+import ToPlanOrNotToPlan
+from walls import *
+from planning import *
+from environment import *
 
 # Assuming placeholders for undefined objects like GRUind, WorldState, etc.
 
