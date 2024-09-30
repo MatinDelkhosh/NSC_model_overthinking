@@ -33,7 +33,7 @@ def model_tree_search(goal, world_state, model, h_rnn, plan_inds, times, ed, mp,
 
     for n_steps in range(1, planner.Lplan + 1):
         batch = len(goal)
-
+        global GRUind
         if n_steps > 1:
             h_rnn, ytemp = model.network[GRUind].cell(h_rnn, agent_input)  # Forward pass
         

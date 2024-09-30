@@ -4,6 +4,7 @@ from tensorflow.keras.optimizers import Adam
 from scipy.special import softmax
 import logging
 from src.ToPlanOrNotToPlan import *
+from priors import *
 
 def sample_actions(model, policy_logits):
     # Don't differentiate through this sampling process
@@ -60,6 +61,7 @@ def construct_ahot(actions, Naction):
     return ahot
 
 def forward_modular(model, env_dimensions, x, h_rnn):
+    global GRUind
     Naction, Nstates, batch = env_dimensions.Naction, env_dimensions.Nstates, x.shape[1]
     h_rnn, ytemp = model.network[GRUind](x, h_rnn)  # Forward pass through recurrent RNN
     logpi_V = model.policy(ytemp)  # Apply policy and value network
