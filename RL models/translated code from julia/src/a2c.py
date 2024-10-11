@@ -4,7 +4,7 @@ from tensorflow.keras.optimizers import Adam
 from scipy.special import softmax
 import logging
 from src.ToPlanOrNotToPlan import *
-from priors import *
+from src.priors import *
 
 def sample_actions(model, policy_logits):
     # Don't differentiate through this sampling process

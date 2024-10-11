@@ -4,9 +4,9 @@ from numpy.random import choice
 from numpy.random import rand
 from scipy.stats import multinomial
 from src.ToPlanOrNotToPlan import *
-from planning import *
-from walls_baselines import *
-from walls import *
+from src.planning import *
+from src.walls_baselines import *
+from src.walls import *
 
 def useful_dimensions(Larena, planner):
     """
