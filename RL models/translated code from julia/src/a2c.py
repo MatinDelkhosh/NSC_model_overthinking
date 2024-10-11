@@ -97,14 +97,14 @@ def calc_deltas(rews, Vs):
 
 def run_episode(model, environment, loss_hp, reward_location=np.zeros(2), agent_state=np.zeros(2),
                 hidden=True, batch=2, calc_loss=True, initial_params=None):
-    ed = environment.dimensions
-    Nout = model.model_properties.Nout
-    Nhidden = model.model_properties.Nhidden
-    Nstates = ed.Nstates
-    Naction = ed.Naction
-    T = ed.T
+    ed = environment['dimensions']
+    Nout = model.model_properties['Nout']
+    Nhidden = model.model_properties['Nhidden']
+    Nstates = ed['Nstates']
+    Naction = ed['Naction']
+    T = ed['T']
 
-    world_state, agent_input = environment.initialize(
+    world_state, agent_input = environment['initialize'](
         reward_location, agent_state, batch, model.model_properties, initial_params=initial_params
     )
 

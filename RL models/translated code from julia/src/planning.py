@@ -1,4 +1,5 @@
 import numpy as np
+from src.model_planner import *
 
 class PlanState:
     def __init__(self, plan_input, plan_cache):
@@ -32,7 +33,6 @@ def build_planner(Lplan, Larena, planning_time=1.0, planning_cost=0.0, constant_
         planning_algorithm = none_planner
         initial_plan_state = lambda batch: PlanState([], [])  # Empty plan state for no planning
     else:
-        global model_planner
         Nplan_in = 4 * Lplan + 1  # Action sequence and whether we ended at the reward location
         Nplan_out = Nstates  # Reward location
         planning_algorithm = model_planner  # Assuming model_planner is defined elsewhere

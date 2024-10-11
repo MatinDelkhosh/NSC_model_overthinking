@@ -11,8 +11,9 @@ class ModelProperties:
         self.greedy_actions = greedy_actions
         self.no_planning = no_planning  # If true, never stand still
 
-class ModularModel:
+class ModularModel(nn.Module):
     def __init__(self, model_properties, network, policy, prediction, forward):
+        super(ModularModel, self).__init__()
         self.model_properties = model_properties
         self.network = network
         self.policy = policy
@@ -51,10 +52,10 @@ class PredictionNetwork(nn.Module):
         return self.fc2(x)
 
 def Modular_model(mp, Naction, Nstates=None, neighbor=False):
-    network = GRUNetwork(mp.Nin, mp.Nhidden)
-    policy = PolicyNetwork(mp.Nhidden, Naction + 1)  # Policy and value function
-    Npred_out = mp.Nout - Naction - 1
-    prediction = PredictionNetwork(mp.Nhidden, Naction, Npred_out)
+    network = GRUNetwork(mp['Nin'], mp['Nhidden'])
+    policy = PolicyNetwork(mp['Nhidden'], Naction + 1)  # Policy and value function
+    Npred_out = mp['Nout'] - Naction - 1
+    prediction = PredictionNetwork(mp['Nhidden'], Naction, Npred_out)
     
     return ModularModel(mp, network, policy, prediction, forward_modular)
 

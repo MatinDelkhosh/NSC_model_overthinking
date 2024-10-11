@@ -22,7 +22,7 @@ def gen_maze_walls(Larena, batch):
     return wall_loc
 
 def initialize_arena(reward_location, agent_state, batch, model_properties, environment_dimensions, initial_plan_state, initial_params=None):
-    Larena = environment_dimensions.Larena
+    Larena = environment_dimensions['Larena']
     Nstates = Larena ** 2
 
     # Initialize reward location if not provided
