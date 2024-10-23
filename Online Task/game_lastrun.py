@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.1post4),
-    on October 04, 2024, at 12:00
+    on October 10, 2024, at 18:20
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -96,7 +96,8 @@ class Maze:
         potential_neighbors = [(x-2, y), (x+2, y), (x, y-2), (x, y+2)]  # همسایه‌های پتانسیل
 
         neighbors = []
-        for nx, ny in potential_neighbors:
+        for n in potential_neighbors:
+            nx, ny = n
             if 0 <= nx < self.size * 2 + 1 and 0 <= ny < self.size * 2 + 1:
             # بررسی می‌کند که همسایه‌ها داخل محدوده ماز هستند
                 neighbors.append((nx, ny))
@@ -104,26 +105,8 @@ class Maze:
         return neighbors  # بازگرداندن لیستی از همسایه‌ها
 
     def remove_wall(self, s, n):
-        sx, sy = s
-        nx, ny = n
-        
-        if sx == nx:  # Vertical neighbors
-            wall_pos = (sx, min(sy, ny) + 1)
-            self.maze[wall_pos[1]][wall_pos[0]] = 0  # Remove horizontal wall
-        elif sy == ny:  # Horizontal neighbors
-            wall_pos = (min(sx, nx) + 1, sy)
-            self.maze[wall_pos[1]][wall_pos[0]] = 0  # Remove vertical wall
-
-        self.maze[ny][nx] = 0  # Mark the new cell as a path
-        self.walls.discard(wall_pos)
-
-    def teleport_agent(self):
-        # Teleport agent to a random location, excluding the goal location
-        while True:
-            random_location = (random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1)
-            if random_location != self.goal_location:
-                return random_location
-
+        # Definition of remove_wall function
+        pass
 
     # Other functions (generate_maze, move_agent, etc.) go here
 # --- Setup global variables (available in all functions) ---
@@ -219,7 +202,7 @@ def setupData(expInfo, dataDir=None):
     thisExp = data.ExperimentHandler(
         name=expName, version='',
         extraInfo=expInfo, runtimeInfo=None,
-        originPath='D:\\Matin\\stuff\\NSC\\code\\NSC_model_overthinking\\Online Task\\game.py',
+        originPath='D:\\Matin\\stuff\\NSC\\code\\NSC_model_overthinking\\Online Task\\game_lastrun.py',
         savePickle=True, saveWideText=True,
         dataFileName=dataDir + os.sep + filename, sortColumns='time'
     )
