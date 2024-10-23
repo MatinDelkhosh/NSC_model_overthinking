@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>20-Second Maze Game</title>
+  <style>
+    canvas {
+      border: 2px solid black;
+    }
+    #gameOver {
+      display: none;
+      font-size: 24px;
+      color: red;
+    }
+    #timer {
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="mazeCanvas" width="400" height="400"></canvas>
+  <p id="timer">Time Left: 20 seconds</p>
+  <p id="gameOver"></p>
+
+  <script src="mazeGame.js"></script>
+</body>
+</html>
