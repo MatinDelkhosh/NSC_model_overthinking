@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.1post4),
-    on October 25, 2024, at 15:59
+    on October 25, 2024, at 18:26
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -619,7 +619,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         if isinstance(trials, data.TrialHandler2) and thisTrial.thisN != trials.thisTrial.thisN:
             continueRoutine = False
         MazeRoutine.forceEnded = routineForceEnded = not continueRoutine
-        while continueRoutine and routineTimer.getTime() < 20.0:
+        while continueRoutine and routineTimer.getTime() < 25.0:
             # get current time
             t = routineTimer.getTime()
             tThisFlip = win.getFutureFlipTime(clock=routineTimer)
@@ -634,8 +634,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 for key in keys:
                     maz.move_agent(key, maz.agent_location)
                 
-                maze_image.draw()
-                maz.draw_agent()
+                if not len(keys):
+                    #maze_image.draw()
+                    for cell in maze_cells:
+                        cell.draw()
+                    maz.draw_agent()
             
             # *Timer* updates
             
@@ -660,7 +663,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # if Timer is stopping this frame...
             if Timer.status == STARTED:
                 # is it time to stop? (based on global clock, using actual start)
-                if tThisFlipGlobal > Timer.tStartRefresh + 20-frameTolerance:
+                if tThisFlipGlobal > Timer.tStartRefresh + 25-frameTolerance:
                     # keep track of stop time/frame for later
                     Timer.tStop = t  # not accounting for scr refresh
                     Timer.tStopRefresh = tThisFlipGlobal  # on global time
@@ -718,7 +721,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         elif MazeRoutine.forceEnded:
             routineTimer.reset()
         else:
-            routineTimer.addTime(-20.000000)
+            routineTimer.addTime(-25.000000)
         thisExp.nextEntry()
         
     # completed 2.0 repeats of 'trials'
