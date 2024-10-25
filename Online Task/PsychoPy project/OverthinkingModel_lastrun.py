@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.1post4),
-    on October 25, 2024, at 18:26
+    on October 25, 2024, at 18:57
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -590,10 +590,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             cell.draw()
         
         win.flip()
-        win.getMovieFrame()
-        win.saveMovieFrames('maze_image.png')
-        
-        maze_image = visual.ImageStim(win, image='maze_image.png')
         # store start times for MazeRoutine
         MazeRoutine.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
         MazeRoutine.tStart = globalClock.getTime(format='float')
@@ -634,11 +630,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 for key in keys:
                     maz.move_agent(key, maz.agent_location)
                 
-                if not len(keys):
-                    #maze_image.draw()
-                    for cell in maze_cells:
-                        cell.draw()
-                    maz.draw_agent()
+                for cell in maze_cells:
+                    cell.draw()
+                maz.draw_agent()
             
             # *Timer* updates
             
