@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.1post4),
-    on October 23, 2024, at 19:50
+    on October 25, 2024, at 15:59
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -368,13 +368,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         color='white', colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
         depth=-1.0);
-    polygon = visual.Rect(
-        win=win, name='polygon',
-        width=(0.5, 0.5)[0], height=(0.5, 0.5)[1],
-        ori=0.0, pos=(0, 0), draggable=False, anchor='center',
-        lineWidth=1.0,
-        colorSpace='rgb', lineColor='white', fillColor='white',
-        opacity=None, depth=-2.0, interpolate=True)
     
     # create some handy timers
     
@@ -439,7 +432,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         # create an object to store info about Routine MazeRoutine
         MazeRoutine = data.Routine(
             name='MazeRoutine',
-            components=[Timer, polygon],
+            components=[Timer],
         )
         MazeRoutine.status = NOT_STARTED
         continueRoutine = True
@@ -455,6 +448,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 self.goal_location = None
                 self.agent_location = None 
                 self.walls = set([])
+                self.goal_reached = False
         
             def generate_maze(self):
                 start = (random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1)
@@ -472,10 +466,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     self.maze[wall[1]][wall[0]] = 0
                     self.walls.remove(wall)
                     
-                self.goal_location = [random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1]
+                self.goal_location = [(self.size - 1) * 2 + 1, (self.size - 1) * 2 + 1]
         
                 while True:
-                    agent_start = [random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1]
+                    agent_start = [1, 1]
                     if agent_start != self.goal_location:
                         self.agent_location = agent_start
                         break
@@ -544,8 +538,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     if self.maze[new_pos[1]][new_pos[0]] == 0:
                         self.agent_location = new_pos
                         #win.flip()
+                        if self.agent_location == self.goal_location:
+                            self.goal_reached = True
                 else:
                     self.agent_location = pos
+                    
         
             def draw_maze(self):
                 rects = []
@@ -578,7 +575,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         GOAL_COLOR = (1, -1, -1)   # red
         
         # Initialize the maze
-        maz = Maze(size=10)
+        maz = Maze(size=12)
         maz.generate_maze()
         
         # Set the size of the cells
@@ -630,13 +627,15 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
             # update/draw components on each frame
             # Run 'Each Frame' code from MazeCode
-            keys = event.getKeys()
-            frame += 1
-            for key in keys:
-                maz.move_agent(key, maz.agent_location)
+            
+            if not maz.goal_reached:
+                keys = event.getKeys()
+                frame += 1
+                for key in keys:
+                    maz.move_agent(key, maz.agent_location)
                 
-            maze_image.draw()
-            maz.draw_agent()
+                maze_image.draw()
+                maz.draw_agent()
             
             # *Timer* updates
             
@@ -671,40 +670,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     # update status
                     Timer.status = FINISHED
                     Timer.setAutoDraw(False)
-            
-            # *polygon* updates
-            
-            # if polygon is starting this frame...
-            if polygon.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
-                # keep track of start time/frame for later
-                polygon.frameNStart = frameN  # exact frame index
-                polygon.tStart = t  # local t and not account for scr refresh
-                polygon.tStartRefresh = tThisFlipGlobal  # on global time
-                win.timeOnFlip(polygon, 'tStartRefresh')  # time at next scr refresh
-                # add timestamp to datafile
-                thisExp.timestampOnFlip(win, 'polygon.started')
-                # update status
-                polygon.status = STARTED
-                polygon.setAutoDraw(True)
-            
-            # if polygon is active this frame...
-            if polygon.status == STARTED:
-                # update params
-                pass
-            
-            # if polygon is stopping this frame...
-            if polygon.status == STARTED:
-                # is it time to stop? (based on global clock, using actual start)
-                if tThisFlipGlobal > polygon.tStartRefresh + 0-frameTolerance:
-                    # keep track of stop time/frame for later
-                    polygon.tStop = t  # not accounting for scr refresh
-                    polygon.tStopRefresh = tThisFlipGlobal  # on global time
-                    polygon.frameNStop = frameN  # exact frame index
-                    # add timestamp to datafile
-                    thisExp.timestampOnFlip(win, 'polygon.stopped')
-                    # update status
-                    polygon.status = FINISHED
-                    polygon.setAutoDraw(False)
             
             # check for quit (typically the Esc key)
             if defaultKeyboard.getKeys(keyList=["escape"]):
