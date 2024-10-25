@@ -4,7 +4,7 @@ import matplotlib.patches as patches
 import os
 from matplotlib.lines import Line2D
 from src.ToPlanOrNotToPlan import *
-from walls import *
+from src.walls import *
 
 # Set some reasonable plotting defaults
 plt.rcParams.update({

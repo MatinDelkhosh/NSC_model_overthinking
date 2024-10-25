@@ -2,8 +2,8 @@ import sqlite3
 import pandas as pd
 import numpy as np
 from src.ToPlanOrNotToPlan import *
-from walls_baselines import *
-from walls import *
+from src.walls_baselines import *
+from src.walls import *
 
 adict = {"[\"Up\"]": 3, "[\"Down\"]": 4, "[\"Right\"]": 1, "[\"Left\"]": 2}
 

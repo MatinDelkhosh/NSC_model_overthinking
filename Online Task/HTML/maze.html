@@ -3,25 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>20-Second Maze Game</title>
+  <title>HTML5 Maze Game</title>
   <style>
+    body {
+      text-align: center;
+      font-family: Arial, sans-serif;
+    }
     canvas {
       border: 2px solid black;
+      display: block;
+      margin: 20px auto;
     }
-    #gameOver {
-      display: none;
-      font-size: 24px;
-      color: red;
-    }
-    #timer {
+    #status {
       font-size: 24px;
     }
   </style>
 </head>
 <body>
+  <h1>Maze Game</h1>
   <canvas id="mazeCanvas" width="400" height="400"></canvas>
-  <p id="timer">Time Left: 20 seconds</p>
-  <p id="gameOver"></p>
+  <p id="status">Use arrow keys to move!</p>
 
   <script src="mazeGame.js"></script>
 </body>
