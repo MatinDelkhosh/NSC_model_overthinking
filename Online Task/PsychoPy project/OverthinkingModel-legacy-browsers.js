@@ -89,16 +89,19 @@ async function updateInfo() {
 async function experimentInit() {
   // Initialize components for Routine "MazeRoutine"
   MazeRoutineClock = new util.Clock();
-  Timer = new visual.TextStim({
-    win: psychoJS.window,
-    name: 'Timer',
-    text: '',
-    font: 'Arial',
-    units: undefined, 
-    pos: [0, 0.45], draggable: false, height: 0.05,  wrapWidth: undefined, ori: 0.0,
-    languageStyle: 'LTR',
-    color: new util.Color('white'),  opacity: undefined,
-    depth: -1.0 
+  maze_time = new visual.ShapeStim ({
+    win: psychoJS.window, name: 'maze_time', 
+    vertices: [[-[0.5, 0.5][0]/2.0, -[0.5, 0.5][1]/2.0], [+[0.5, 0.5][0]/2.0, -[0.5, 0.5][1]/2.0], [0, [0.5, 0.5][1]/2.0]],
+    ori: 0.0, 
+    pos: [0, 0], 
+    draggable: false, 
+    anchor: 'center',
+    lineWidth: 1.0, 
+    colorSpace: 'rgb',
+    lineColor: new util.Color('white'),
+    fillColor: new util.Color('white'),
+    fillColor: 'white',
+    opacity: 0.0, depth: -1, interpolate: true,
   });
   
   // Create some handy timers
@@ -304,11 +307,11 @@ function MazeRoutineRoutineBegin(snapshot) {
     PATH_COLOR = [0.7, 0.7, 0.7];
     AGENT_COLOR = [(- 1), (- 1), 1];
     GOAL_COLOR = [1, (- 1), (- 1)];
-    maze = new Maze({"size": 10});
-    maze.generate_maze();
-    cell_size = (0.4 / maze.size);
+    maz = new Maze({"size": 10});
+    maz.generate_maze();
+    cell_size = (0.4 / maz.size);
     player_size = 0.9;
-    function draw_maze() {
+    function draw_maze(maze = maz) {
         var agent, ax, ay, color, goal, gx, gy, rect;
         for (var y, _pj_c = 0, _pj_a = util.range(maze.maze.length), _pj_b = _pj_a.length; (_pj_c < _pj_b); _pj_c += 1) {
             y = _pj_a[_pj_c];
@@ -329,7 +332,7 @@ function MazeRoutineRoutineBegin(snapshot) {
         goal.pos = [((gx * cell_size) - (maze.size * cell_size)), ((gy * cell_size) - (maze.size * cell_size))];
         goal.draw();
     }
-    function move_agent(key, pos) {
+    function move_agent(key, pos, maze) {
         var c1, c2, new_pos;
         new_pos = pos.slice(0);
         if ((key === "up")) {
@@ -357,12 +360,13 @@ function MazeRoutineRoutineBegin(snapshot) {
         return pos;
     }
     pressed_keys = [];
+    frame = 0;
     
     psychoJS.experiment.addData('MazeRoutine.started', globalClock.getTime());
     MazeRoutineMaxDuration = null
     // keep track of which components have finished
     MazeRoutineComponents = [];
-    MazeRoutineComponents.push(Timer);
+    MazeRoutineComponents.push(maze_time);
     
     MazeRoutineComponents.forEach( function(thisComponent) {
       if ('status' in thisComponent)
@@ -381,29 +385,27 @@ function MazeRoutineRoutineEachFrame() {
     // update/draw components on each frame
     // Run 'Each Frame' code from MazeCode
     keys = psychoJS.eventManager.getKeys();
+    frame += 1;
     for (var key, _pj_c = 0, _pj_a = keys, _pj_b = _pj_a.length; (_pj_c < _pj_b); _pj_c += 1) {
         key = _pj_a[_pj_c];
-        maze.agent_location = move_agent(key, maze.agent_location);
+        console.log(key, frame);
+        maz.agent_location = move_agent(key, maz.agent_location, maz);
     }
-    draw_maze();
+    draw_maze(maz);
     
     
-    if (Timer.status === PsychoJS.Status.STARTED){ // only update if being drawn
-      Timer.setText('timer', false);
-    }
-    
-    // *Timer* updates
-    if (t >= 0.0 && Timer.status === PsychoJS.Status.NOT_STARTED) {
+    // *maze_time* updates
+    if (t >= 0.0 && maze_time.status === PsychoJS.Status.NOT_STARTED) {
       // keep track of start time/frame for later
-      Timer.tStart = t;  // (not accounting for frame time here)
-      Timer.frameNStart = frameN;  // exact frame index
+      maze_time.tStart = t;  // (not accounting for frame time here)
+      maze_time.frameNStart = frameN;  // exact frame index
       
-      Timer.setAutoDraw(true);
+      maze_time.setAutoDraw(true);
     }
     
     frameRemains = 0.0 + 20 - psychoJS.window.monitorFramePeriod * 0.75;// most of one frame period left
-    if (Timer.status === PsychoJS.Status.STARTED && t >= frameRemains) {
-      Timer.setAutoDraw(false);
+    if (maze_time.status === PsychoJS.Status.STARTED && t >= frameRemains) {
+      maze_time.setAutoDraw(false);
     }
     
     // check for quit (typically the Esc key)

@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.1post4),
-    on October 25, 2024, at 16:10
+    on October 31, 2024, at 16:02
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -361,13 +361,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # Start Code - component code to be run after the window creation
     
     # --- Initialize components for Routine "MazeRoutine" ---
-    Timer = visual.TextStim(win=win, name='Timer',
-        text='',
-        font='Arial',
-        pos=(0, .45), draggable=False, height=0.05, wrapWidth=None, ori=0.0, 
-        color='white', colorSpace='rgb', opacity=None, 
-        languageStyle='LTR',
-        depth=-1.0);
     
     # create some handy timers
     
@@ -432,7 +425,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         # create an object to store info about Routine MazeRoutine
         MazeRoutine = data.Routine(
             name='MazeRoutine',
-            components=[Timer],
+            components=[],
         )
         MazeRoutine.status = NOT_STARTED
         continueRoutine = True
@@ -532,12 +525,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         
                 c1 = 0 <= new_pos[1] < self.size*2
                 c2 = 0 <= new_pos[0] < self.size*2
-                #print(new_pos,pos,key,self.size)
                 
                 if c1 and c2:
                     if self.maze[new_pos[1]][new_pos[0]] == 0:
                         self.agent_location = new_pos
-                        #win.flip()
                         if self.agent_location == self.goal_location:
                             self.goal_reached = True
                 else:
@@ -581,19 +572,20 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         # Set the size of the cells
         cell_size = .4/maz.size
         player_size = .9
-            
+        
         pressed_keys = []
-        frame = 0
         
         maze_cells = maz.draw_maze()
         for cell in maze_cells:
             cell.draw()
-        
-        win.flip()
-        win.getMovieFrame()
-        win.saveMovieFrames('maze_image.png')
-        
-        maze_image = visual.ImageStim(win, image='maze_image.png')
+            
+        Timer = visual.TextStim(win=win, name='Timer',
+                text='0',
+                font='Arial',
+                pos=(0, .45), draggable=False, height=0.05, wrapWidth=None, ori=0.0, 
+                color='white', colorSpace='rgb', opacity=None, 
+                languageStyle='LTR',
+                depth=-1.0);
         # store start times for MazeRoutine
         MazeRoutine.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
         MazeRoutine.tStart = globalClock.getTime(format='float')
@@ -619,7 +611,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         if isinstance(trials, data.TrialHandler2) and thisTrial.thisN != trials.thisTrial.thisN:
             continueRoutine = False
         MazeRoutine.forceEnded = routineForceEnded = not continueRoutine
-        while continueRoutine and routineTimer.getTime() < 25.0:
+        while continueRoutine:
             # get current time
             t = routineTimer.getTime()
             tThisFlip = win.getFutureFlipTime(clock=routineTimer)
@@ -627,49 +619,16 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
             # update/draw components on each frame
             # Run 'Each Frame' code from MazeCode
-            
             if not maz.goal_reached:
                 keys = event.getKeys()
-                frame += 1
                 for key in keys:
                     maz.move_agent(key, maz.agent_location)
                 
-                maze_image.draw()
+                for cell in maze_cells:
+                    cell.draw()
                 maz.draw_agent()
-            
-            # *Timer* updates
-            
-            # if Timer is starting this frame...
-            if Timer.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
-                # keep track of start time/frame for later
-                Timer.frameNStart = frameN  # exact frame index
-                Timer.tStart = t  # local t and not account for scr refresh
-                Timer.tStartRefresh = tThisFlipGlobal  # on global time
-                win.timeOnFlip(Timer, 'tStartRefresh')  # time at next scr refresh
-                # add timestamp to datafile
-                thisExp.timestampOnFlip(win, 'Timer.started')
-                # update status
-                Timer.status = STARTED
-                Timer.setAutoDraw(True)
-            
-            # if Timer is active this frame...
-            if Timer.status == STARTED and not maz.goal_reached:
-                # update params
-                Timer.setText(int(t+1), log=False)
-            
-            # if Timer is stopping this frame...
-            if Timer.status == STARTED:
-                # is it time to stop? (based on global clock, using actual start)
-                if tThisFlipGlobal > Timer.tStartRefresh + 25-frameTolerance:
-                    # keep track of stop time/frame for later
-                    Timer.tStop = t  # not accounting for scr refresh
-                    Timer.tStopRefresh = tThisFlipGlobal  # on global time
-                    Timer.frameNStop = frameN  # exact frame index
-                    # add timestamp to datafile
-                    thisExp.timestampOnFlip(win, 'Timer.stopped')
-                    # update status
-                    Timer.status = FINISHED
-                    Timer.setAutoDraw(False)
+                Timer.setText(str(round(routineTimer.getTime())), log=False)
+                Timer.draw()
             
             # check for quit (typically the Esc key)
             if defaultKeyboard.getKeys(keyList=["escape"]):
@@ -712,13 +671,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         thisExp.addData('MazeRoutine.stopped', MazeRoutine.tStop)
         # Run 'End Routine' code from MazeCode
         print(frame)
-        # using non-slip timing so subtract the expected duration of this Routine (unless ended on request)
-        if MazeRoutine.maxDurationReached:
-            routineTimer.addTime(-MazeRoutine.maxDuration)
-        elif MazeRoutine.forceEnded:
-            routineTimer.reset()
-        else:
-            routineTimer.addTime(-25.000000)
+        # the Routine "MazeRoutine" was not non-slip safe, so reset the non-slip timer
+        routineTimer.reset()
         thisExp.nextEntry()
         
     # completed 2.0 repeats of 'trials'
