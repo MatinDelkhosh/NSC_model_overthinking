@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.1post4),
-    on October 31, 2024, at 16:10
+    on November 01, 2024, at 18:02
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -32,6 +32,9 @@ import sys  # to get file system encoding
 
 import psychopy.iohub as io
 from psychopy.hardware import keyboard
+
+# Run 'Before Experiment' code from Maze_Code
+
 
 # --- Setup global variables (available in all functions) ---
 # create a device manager to handle hardware (keyboards, mice, mirophones, speakers, etc.)
@@ -361,8 +364,134 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # Start Code - component code to be run after the window creation
     
     # --- Initialize components for Routine "MazeRoutine" ---
-    maze_time = visual.ShapeStim(
-        win=win, name='maze_time',
+    # Run 'Begin Experiment' code from Maze_Code
+    import random
+    class Maze:
+        def __init__(self, size=8):
+            self.size = size
+            self.maze = [[1] * (2 * size + 1) for _ in range(2 * size + 1)]
+            self.visited = set([])
+            self.goal_location = None
+            self.agent_location = None 
+            self.walls = set([])
+            self.goal_reached = False
+    
+        def generate_maze(self):
+            start = (random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1)
+            self.maze[start[1]][start[0]] = 0
+            self.walk_maze(start)
+            
+            for x in range(1, self.size * 2, 2):
+                for y in range(1, self.size * 2, 2):
+                    self.walls.add((x, y))
+    
+            for _ in range(4):
+                if not self.walls:
+                    break
+                wall = random.choice(list(self.walls))
+                self.maze[wall[1]][wall[0]] = 0
+                self.walls.remove(wall)
+                
+            self.goal_location = [(self.size - 1) * 2 + 1, (self.size - 1) * 2 + 1]
+    
+            while True:
+                agent_start = [1, 1]
+                if agent_start != self.goal_location:
+                    self.agent_location = agent_start
+                    break
+    
+            return self.maze
+            
+        def walk_maze(self, s):
+            self.visited.add(s)
+            neighbors = self.neighbors(s)
+            random.shuffle(neighbors)
+    
+            for n in neighbors:
+                if n not in self.visited:
+                    self.remove_wall(s, n)
+                    self.walk_maze(n)
+                    
+        def neighbors(self, s):
+            x, y = s
+            potential_neighbors = [(x-2, y), (x+2, y), (x, y-2), (x, y+2)]
+    
+            neighbors = []
+            for n in potential_neighbors:
+                nx, ny = n
+                if 0 <= nx < self.size * 2 + 1 and 0 <= ny < self.size * 2 + 1:
+                        neighbors.append((nx, ny))
+                        
+            return neighbors
+            
+        def remove_wall(self, s, n):
+            sx, sy = s
+            nx, ny = n
+            
+            if sx == nx:  # Vertical neighbors
+                wall_pos = (sx, min(sy, ny) + 1)
+                self.maze[wall_pos[1]][wall_pos[0]] = 0  # Remove horizontal wall
+            elif sy == ny:  # Horizontal neighbors
+                wall_pos = (min(sx, nx) + 1, sy)
+                self.maze[wall_pos[1]][wall_pos[0]] = 0  # Remove vertical wall
+    
+            self.maze[ny][nx] = 0  # Mark the new cell as a path
+            self.walls.discard(wall_pos)
+    
+        def teleport_agent(self):
+            # Teleport agent to a random location, excluding the goal location
+            while True:
+                random_location = (random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1)
+                if random_location != self.goal_location:
+                    return random_location
+                
+        def move_agent(self, key, pos):
+            new_pos = pos[:]
+            if key == 'up' or key == 'w':
+                new_pos[1] += 1
+            elif key == 'down' or key == 's':
+                new_pos[1] -= 1
+            elif key == 'left' or key == 'a':
+                new_pos[0] -= 1
+            elif key == 'right' or key == 'd':
+                new_pos[0] += 1
+    
+            c1 = 0 <= new_pos[1] < self.size*2
+            c2 = 0 <= new_pos[0] < self.size*2
+            
+            if c1 and c2:
+                if self.maze[new_pos[1]][new_pos[0]] == 0:
+                    self.agent_location = new_pos
+                    if self.agent_location == self.goal_location:
+                        self.goal_reached = True
+            else:
+                self.agent_location = pos
+                
+    
+        def draw_maze(self):
+            rects = []
+            for y in range(len(self.maze)):
+                for x in range(len(self.maze[0])):
+                    color = WALL_COLOR if self.maze[y][x] == 1 else PATH_COLOR
+                    rect = visual.Rect(win, width=cell_size, height=cell_size, fillColor=color, interpolate=True)
+                    rect.pos = [x * cell_size - (self.size * cell_size), y * cell_size - (self.size * cell_size)]
+                    rects.append(rect)
+            return rects
+    
+        def draw_agent(self):
+            # Draw the agent
+            ax, ay = self.agent_location
+            agent = visual.Circle(win, radius=cell_size * player_size / 2, fillColor=AGENT_COLOR)
+            agent.pos = [ax * cell_size - (self.size * cell_size), ay * cell_size - (self.size * cell_size)]
+            agent.draw()
+    
+            # Draw the goal
+            gx, gy = self.goal_location
+            goal = visual.Rect(win, width=cell_size, height=cell_size, fillColor=GOAL_COLOR)
+            goal.pos = [gx * cell_size - (self.size * cell_size), gy * cell_size - (self.size * cell_size)]
+            goal.draw()
+    Maze_timer = visual.ShapeStim(
+        win=win, name='Maze_timer',
         size=(0.5, 0.5), vertices='triangle',
         ori=0.0, pos=(0, 0), draggable=False, anchor='center',
         lineWidth=1.0,
@@ -400,7 +529,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # set up handler to look after randomisation of conditions etc
     trials = data.TrialHandler2(
         name='trials',
-        nReps=2.0, 
+        nReps=10.0, 
         method='random', 
         extraInfo=expInfo, 
         originPath=-1, 
@@ -432,140 +561,12 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         # create an object to store info about Routine MazeRoutine
         MazeRoutine = data.Routine(
             name='MazeRoutine',
-            components=[maze_time],
+            components=[Maze_timer],
         )
         MazeRoutine.status = NOT_STARTED
         continueRoutine = True
         # update component parameters for each repeat
-        # Run 'Begin Routine' code from MazeCode
-        import random
-        
-        class Maze:
-            def __init__(self, size=8):
-                self.size = size
-                self.maze = [[1] * (2 * size + 1) for _ in range(2 * size + 1)]
-                self.visited = set([])
-                self.goal_location = None
-                self.agent_location = None 
-                self.walls = set([])
-                self.goal_reached = False
-        
-            def generate_maze(self):
-                start = (random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1)
-                self.maze[start[1]][start[0]] = 0
-                self.walk_maze(start)
-                
-                for x in range(1, self.size * 2, 2):
-                    for y in range(1, self.size * 2, 2):
-                        self.walls.add((x, y))
-        
-                for _ in range(4):
-                    if not self.walls:
-                        break
-                    wall = random.choice(list(self.walls))
-                    self.maze[wall[1]][wall[0]] = 0
-                    self.walls.remove(wall)
-                    
-                self.goal_location = [(self.size - 1) * 2 + 1, (self.size - 1) * 2 + 1]
-        
-                while True:
-                    agent_start = [1, 1]
-                    if agent_start != self.goal_location:
-                        self.agent_location = agent_start
-                        break
-        
-                return self.maze
-                
-            def walk_maze(self, s):
-                self.visited.add(s)
-                neighbors = self.neighbors(s)
-                random.shuffle(neighbors)
-        
-                for n in neighbors:
-                    if n not in self.visited:
-                        self.remove_wall(s, n)
-                        self.walk_maze(n)
-                        
-            def neighbors(self, s):
-                x, y = s
-                potential_neighbors = [(x-2, y), (x+2, y), (x, y-2), (x, y+2)]
-        
-                neighbors = []
-                for n in potential_neighbors:
-                    nx, ny = n
-                    if 0 <= nx < self.size * 2 + 1 and 0 <= ny < self.size * 2 + 1:
-                            neighbors.append((nx, ny))
-                            
-                return neighbors
-                
-            def remove_wall(self, s, n):
-                sx, sy = s
-                nx, ny = n
-                
-                if sx == nx:  # Vertical neighbors
-                    wall_pos = (sx, min(sy, ny) + 1)
-                    self.maze[wall_pos[1]][wall_pos[0]] = 0  # Remove horizontal wall
-                elif sy == ny:  # Horizontal neighbors
-                    wall_pos = (min(sx, nx) + 1, sy)
-                    self.maze[wall_pos[1]][wall_pos[0]] = 0  # Remove vertical wall
-        
-                self.maze[ny][nx] = 0  # Mark the new cell as a path
-                self.walls.discard(wall_pos)
-        
-            def teleport_agent(self):
-                # Teleport agent to a random location, excluding the goal location
-                while True:
-                    random_location = (random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1)
-                    if random_location != self.goal_location:
-                        return random_location
-                    
-            def move_agent(self, key, pos):
-                new_pos = pos[:]
-                if key == 'up' or key == 'w':
-                    new_pos[1] += 1
-                elif key == 'down' or key == 's':
-                    new_pos[1] -= 1
-                elif key == 'left' or key == 'a':
-                    new_pos[0] -= 1
-                elif key == 'right' or key == 'd':
-                    new_pos[0] += 1
-        
-                c1 = 0 <= new_pos[1] < self.size*2
-                c2 = 0 <= new_pos[0] < self.size*2
-                
-                if c1 and c2:
-                    if self.maze[new_pos[1]][new_pos[0]] == 0:
-                        self.agent_location = new_pos
-                        if self.agent_location == self.goal_location:
-                            self.goal_reached = True
-                else:
-                    self.agent_location = pos
-                    
-        
-            def draw_maze(self):
-                rects = []
-                for y in range(len(self.maze)):
-                    for x in range(len(self.maze[0])):
-                        color = WALL_COLOR if self.maze[y][x] == 1 else PATH_COLOR
-                        rect = visual.Rect(win, width=cell_size, height=cell_size, fillColor=color, interpolate=True)
-                        rect.pos = [x * cell_size - (self.size * cell_size), y * cell_size - (self.size * cell_size)]
-                        rects.append(rect)
-                return rects
-        
-            def draw_agent(self):
-                # Draw the agent
-                ax, ay = self.agent_location
-                agent = visual.Circle(win, radius=cell_size * player_size / 2, fillColor=AGENT_COLOR)
-                agent.pos = [ax * cell_size - (self.size * cell_size), ay * cell_size - (self.size * cell_size)]
-                agent.draw()
-        
-                # Draw the goal
-                gx, gy = self.goal_location
-                goal = visual.Rect(win, width=cell_size, height=cell_size, fillColor=GOAL_COLOR)
-                goal.pos = [gx * cell_size - (self.size * cell_size), gy * cell_size - (self.size * cell_size)]
-                goal.draw()
-        
-                
+        # Run 'Begin Routine' code from Maze_Code
         # Colors
         WALL_COLOR = (-.4, -.4, -.4)  # Dark Gray
         PATH_COLOR = (.7, .7, .7)     # white
@@ -593,12 +594,22 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 color='white', colorSpace='rgb', opacity=None, 
                 languageStyle='LTR',
                 depth=-1.0);
+                
+        Overlay = visual.Rect(
+                win=win, name='Overlay',
+                width=(.9, .9)[0], height=(.5, .5)[1],
+                ori=0.0, pos=(0, 0), draggable=False, anchor='center',
+                lineWidth=1.0,
+                colorSpace='rgb', lineColor='white', fillColor='green',
+                opacity=0.6, depth=-2.0, interpolate=True)
+                
+        Countdown = False
+        skip_routine = False
         # store start times for MazeRoutine
         MazeRoutine.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
         MazeRoutine.tStart = globalClock.getTime(format='float')
         MazeRoutine.status = STARTED
         thisExp.addData('MazeRoutine.started', MazeRoutine.tStart)
-        MazeRoutine.maxDuration = None
         # keep track of which components have finished
         MazeRoutineComponents = MazeRoutine.components
         for thisComponent in MazeRoutine.components:
@@ -618,58 +629,80 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         if isinstance(trials, data.TrialHandler2) and thisTrial.thisN != trials.thisTrial.thisN:
             continueRoutine = False
         MazeRoutine.forceEnded = routineForceEnded = not continueRoutine
-        while continueRoutine and routineTimer.getTime() < 20.0:
+        while continueRoutine:
             # get current time
             t = routineTimer.getTime()
             tThisFlip = win.getFutureFlipTime(clock=routineTimer)
             tThisFlipGlobal = win.getFutureFlipTime(clock=None)
             frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
             # update/draw components on each frame
-            # Run 'Each Frame' code from MazeCode
-            if not maz.goal_reached:
+            # is it time to end the Routine? (based on condition)
+            if bool(skip_routine):
+                continueRoutine = False
+            # Run 'Each Frame' code from Maze_Code
+            t = routineTimer.getTime()
+            if not maz.goal_reached and t < 20:
                 keys = event.getKeys()
                 for key in keys:
                     maz.move_agent(key, maz.agent_location)
+                    break
                 
                 for cell in maze_cells:
                     cell.draw()
                 maz.draw_agent()
-                Timer.setText(str(round(routineTimer.getTime())), log=False)
+                Timer.setText(str(round(t)), log=False)
                 Timer.draw()
+                
+            else:
+                if not Countdown:
+                    ts = t
+                    Countdown = True
+                for cell in maze_cells:
+                    cell.draw()
+                if not maz.goal_reached:
+                    Overlay.fillColor = 'red'
+                    Overlay.opacity = 0.6
+                Overlay.draw()
+                text = 'Success!' if maz.goal_reached else 'Time Over!'
+                Timer.setText(text)
+                Timer.pos = (0.0)
+                Timer.draw()
+                if t - ts >= 2:
+                    skip_routine = True
             
-            # *maze_time* updates
+            # *Maze_timer* updates
             
-            # if maze_time is starting this frame...
-            if maze_time.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+            # if Maze_timer is starting this frame...
+            if Maze_timer.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
                 # keep track of start time/frame for later
-                maze_time.frameNStart = frameN  # exact frame index
-                maze_time.tStart = t  # local t and not account for scr refresh
-                maze_time.tStartRefresh = tThisFlipGlobal  # on global time
-                win.timeOnFlip(maze_time, 'tStartRefresh')  # time at next scr refresh
+                Maze_timer.frameNStart = frameN  # exact frame index
+                Maze_timer.tStart = t  # local t and not account for scr refresh
+                Maze_timer.tStartRefresh = tThisFlipGlobal  # on global time
+                win.timeOnFlip(Maze_timer, 'tStartRefresh')  # time at next scr refresh
                 # add timestamp to datafile
-                thisExp.timestampOnFlip(win, 'maze_time.started')
+                thisExp.timestampOnFlip(win, 'Maze_timer.started')
                 # update status
-                maze_time.status = STARTED
-                maze_time.setAutoDraw(True)
+                Maze_timer.status = STARTED
+                Maze_timer.setAutoDraw(True)
             
-            # if maze_time is active this frame...
-            if maze_time.status == STARTED:
+            # if Maze_timer is active this frame...
+            if Maze_timer.status == STARTED:
                 # update params
                 pass
             
-            # if maze_time is stopping this frame...
-            if maze_time.status == STARTED:
+            # if Maze_timer is stopping this frame...
+            if Maze_timer.status == STARTED:
                 # is it time to stop? (based on global clock, using actual start)
-                if tThisFlipGlobal > maze_time.tStartRefresh + 20-frameTolerance:
+                if tThisFlipGlobal > Maze_timer.tStartRefresh + 25-frameTolerance:
                     # keep track of stop time/frame for later
-                    maze_time.tStop = t  # not accounting for scr refresh
-                    maze_time.tStopRefresh = tThisFlipGlobal  # on global time
-                    maze_time.frameNStop = frameN  # exact frame index
+                    Maze_timer.tStop = t  # not accounting for scr refresh
+                    Maze_timer.tStopRefresh = tThisFlipGlobal  # on global time
+                    Maze_timer.frameNStop = frameN  # exact frame index
                     # add timestamp to datafile
-                    thisExp.timestampOnFlip(win, 'maze_time.stopped')
+                    thisExp.timestampOnFlip(win, 'Maze_timer.stopped')
                     # update status
-                    maze_time.status = FINISHED
-                    maze_time.setAutoDraw(False)
+                    Maze_timer.status = FINISHED
+                    Maze_timer.setAutoDraw(False)
             
             # check for quit (typically the Esc key)
             if defaultKeyboard.getKeys(keyList=["escape"]):
@@ -710,16 +743,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         MazeRoutine.tStop = globalClock.getTime(format='float')
         MazeRoutine.tStopRefresh = tThisFlipGlobal
         thisExp.addData('MazeRoutine.stopped', MazeRoutine.tStop)
-        # using non-slip timing so subtract the expected duration of this Routine (unless ended on request)
-        if MazeRoutine.maxDurationReached:
-            routineTimer.addTime(-MazeRoutine.maxDuration)
-        elif MazeRoutine.forceEnded:
-            routineTimer.reset()
-        else:
-            routineTimer.addTime(-20.000000)
+        # the Routine "MazeRoutine" was not non-slip safe, so reset the non-slip timer
+        routineTimer.reset()
         thisExp.nextEntry()
         
-    # completed 2.0 repeats of 'trials'
+    # completed 10.0 repeats of 'trials'
     
     if thisSession is not None:
         # if running in a Session with a Liaison client, send data up to now
