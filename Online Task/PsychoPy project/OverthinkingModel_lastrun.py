@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.1post4),
-    on November 01, 2024, at 18:37
+    on November 01, 2024, at 19:46
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -363,6 +363,22 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     
     # Start Code - component code to be run after the window creation
     
+    # --- Initialize components for Routine "Questionnaire" ---
+    win.allowStencil = True
+    form = visual.Form(win=win, name='form',
+        items='D:/Matin/stuff/NSC/code/NSC_model_overthinking/Online Task/questionnaire/questionnaire.xlsx',
+        textHeight=0.03,
+        font='Open Sans',
+        randomize=False,
+        style='dark',
+        fillColor=None, borderColor=None, itemColor='white', 
+        responseColor='white', markerColor='red', colorSpace='rgb', 
+        size=(1.2, .8),
+        pos=(0, .05),
+        itemPadding=0.05,
+        depth=0
+    )
+    
     # --- Initialize components for Routine "MazeRoutine" ---
     # Run 'Begin Experiment' code from Maze_Code
     import random
@@ -536,6 +552,110 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         format='%Y-%m-%d %Hh%M.%S.%f %z', fractionalSecondDigits=6
     )
     
+    # --- Prepare to start Routine "Questionnaire" ---
+    # create an object to store info about Routine Questionnaire
+    Questionnaire = data.Routine(
+        name='Questionnaire',
+        components=[form],
+    )
+    Questionnaire.status = NOT_STARTED
+    continueRoutine = True
+    # update component parameters for each repeat
+    # store start times for Questionnaire
+    Questionnaire.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
+    Questionnaire.tStart = globalClock.getTime(format='float')
+    Questionnaire.status = STARTED
+    thisExp.addData('Questionnaire.started', Questionnaire.tStart)
+    Questionnaire.maxDuration = None
+    # keep track of which components have finished
+    QuestionnaireComponents = Questionnaire.components
+    for thisComponent in Questionnaire.components:
+        thisComponent.tStart = None
+        thisComponent.tStop = None
+        thisComponent.tStartRefresh = None
+        thisComponent.tStopRefresh = None
+        if hasattr(thisComponent, 'status'):
+            thisComponent.status = NOT_STARTED
+    # reset timers
+    t = 0
+    _timeToFirstFrame = win.getFutureFlipTime(clock="now")
+    frameN = -1
+    
+    # --- Run Routine "Questionnaire" ---
+    Questionnaire.forceEnded = routineForceEnded = not continueRoutine
+    while continueRoutine:
+        # get current time
+        t = routineTimer.getTime()
+        tThisFlip = win.getFutureFlipTime(clock=routineTimer)
+        tThisFlipGlobal = win.getFutureFlipTime(clock=None)
+        frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
+        # update/draw components on each frame
+        
+        # *form* updates
+        
+        # if form is starting this frame...
+        if form.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+            # keep track of start time/frame for later
+            form.frameNStart = frameN  # exact frame index
+            form.tStart = t  # local t and not account for scr refresh
+            form.tStartRefresh = tThisFlipGlobal  # on global time
+            win.timeOnFlip(form, 'tStartRefresh')  # time at next scr refresh
+            # add timestamp to datafile
+            thisExp.timestampOnFlip(win, 'form.started')
+            # update status
+            form.status = STARTED
+            form.setAutoDraw(True)
+        
+        # if form is active this frame...
+        if form.status == STARTED:
+            # update params
+            pass
+        
+        # check for quit (typically the Esc key)
+        if defaultKeyboard.getKeys(keyList=["escape"]):
+            thisExp.status = FINISHED
+        if thisExp.status == FINISHED or endExpNow:
+            endExperiment(thisExp, win=win)
+            return
+        # pause experiment here if requested
+        if thisExp.status == PAUSED:
+            pauseExperiment(
+                thisExp=thisExp, 
+                win=win, 
+                timers=[routineTimer], 
+                playbackComponents=[]
+            )
+            # skip the frame we paused on
+            continue
+        
+        # check if all components have finished
+        if not continueRoutine:  # a component has requested a forced-end of Routine
+            Questionnaire.forceEnded = routineForceEnded = True
+            break
+        continueRoutine = False  # will revert to True if at least one component still running
+        for thisComponent in Questionnaire.components:
+            if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
+                continueRoutine = True
+                break  # at least one component has not yet finished
+        
+        # refresh the screen
+        if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
+            win.flip()
+    
+    # --- Ending Routine "Questionnaire" ---
+    for thisComponent in Questionnaire.components:
+        if hasattr(thisComponent, "setAutoDraw"):
+            thisComponent.setAutoDraw(False)
+    # store stop times for Questionnaire
+    Questionnaire.tStop = globalClock.getTime(format='float')
+    Questionnaire.tStopRefresh = tThisFlipGlobal
+    thisExp.addData('Questionnaire.stopped', Questionnaire.tStop)
+    form.addDataToExp(thisExp, 'rows')
+    form.autodraw = False
+    thisExp.nextEntry()
+    # the Routine "Questionnaire" was not non-slip safe, so reset the non-slip timer
+    routineTimer.reset()
+    
     # set up handler to look after randomisation of conditions etc
     trials = data.TrialHandler2(
         name='trials',
@@ -578,7 +698,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         # update component parameters for each repeat
         # Run 'Begin Routine' code from Maze_Code
         # Initialize the maze
-        maz = Maze(size=10)
+        maz = Maze(size=12)
         maz.generate_maze()
         
         # Set the size of the cells
