@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.1post4),
-    on November 01, 2024, at 18:02
+    on November 01, 2024, at 18:37
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -366,6 +366,13 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # --- Initialize components for Routine "MazeRoutine" ---
     # Run 'Begin Experiment' code from Maze_Code
     import random
+    
+    # Colors
+    WALL_COLOR = (-.4, -.4, -.4)  # Dark Gray
+    PATH_COLOR = (.7, .7, .7)     # white
+    AGENT_COLOR = (-1, -1, 1)  # blue
+    GOAL_COLOR = (1, -1, -1)   # red
+    
     class Maze:
         def __init__(self, size=8):
             self.size = size
@@ -482,14 +489,17 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # Draw the agent
             ax, ay = self.agent_location
             agent = visual.Circle(win, radius=cell_size * player_size / 2, fillColor=AGENT_COLOR)
+            if self.goal_reached:
+                agent.fillColor = 'yellow'
             agent.pos = [ax * cell_size - (self.size * cell_size), ay * cell_size - (self.size * cell_size)]
             agent.draw()
     
             # Draw the goal
-            gx, gy = self.goal_location
-            goal = visual.Rect(win, width=cell_size, height=cell_size, fillColor=GOAL_COLOR)
-            goal.pos = [gx * cell_size - (self.size * cell_size), gy * cell_size - (self.size * cell_size)]
-            goal.draw()
+            if not self.goal_reached:
+                gx, gy = self.goal_location
+                goal = visual.Rect(win, width=cell_size, height=cell_size, fillColor=GOAL_COLOR)
+                goal.pos = [gx * cell_size - (self.size * cell_size), gy * cell_size - (self.size * cell_size)]
+                goal.draw()
     Maze_timer = visual.ShapeStim(
         win=win, name='Maze_timer',
         size=(0.5, 0.5), vertices='triangle',
@@ -567,12 +577,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         continueRoutine = True
         # update component parameters for each repeat
         # Run 'Begin Routine' code from Maze_Code
-        # Colors
-        WALL_COLOR = (-.4, -.4, -.4)  # Dark Gray
-        PATH_COLOR = (.7, .7, .7)     # white
-        AGENT_COLOR = (-1, -1, 1)  # blue
-        GOAL_COLOR = (1, -1, -1)   # red
-        
         # Initialize the maze
         maz = Maze(size=10)
         maz.generate_maze()
@@ -657,16 +661,21 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 if not Countdown:
                     ts = t
                     Countdown = True
+                    
                 for cell in maze_cells:
                     cell.draw()
+                maz.draw_agent()
+                
                 if not maz.goal_reached:
                     Overlay.fillColor = 'red'
                     Overlay.opacity = 0.6
                 Overlay.draw()
+                
                 text = 'Success!' if maz.goal_reached else 'Time Over!'
                 Timer.setText(text)
                 Timer.pos = (0.0)
                 Timer.draw()
+                
                 if t - ts >= 2:
                     skip_routine = True
             
