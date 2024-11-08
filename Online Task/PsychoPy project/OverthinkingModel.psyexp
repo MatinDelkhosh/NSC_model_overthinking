@@ -23,7 +23,7 @@
     <Param val="True" valType="bool" updates="None" name="Save wide csv file"/>
     <Param val="1" valType="num" updates="None" name="Screen"/>
     <Param val="True" valType="bool" updates="None" name="Show info dlg"/>
-    <Param val="False" valType="bool" updates="None" name="Show mouse"/>
+    <Param val="True" valType="bool" updates="None" name="Show mouse"/>
     <Param val="height" valType="str" updates="None" name="Units"/>
     <Param val="" valType="str" updates="None" name="Use version"/>
     <Param val="[1280, 720]" valType="list" updates="None" name="Window size (pixels)"/>
@@ -50,7 +50,7 @@
     <Param val="on Sync" valType="str" updates="None" name="exportHTML"/>
     <Param val="None" valType="str" updates="None" name="eyetracker"/>
     <Param val="" valType="code" updates="None" name="frameRate"/>
-    <Param val="Attempting to measure frame rate of screen, please wait..." valType="str" updates="None" name="frameRateMsg"/>
+    <Param val="Loading" valType="str" updates="None" name="frameRateMsg"/>
     <Param val="127.0.0.1" valType="str" updates="None" name="gpAddress"/>
     <Param val="4242" valType="num" updates="None" name="gpPort"/>
     <Param val="ioHub" valType="str" updates="None" name="keyboardBackend"/>
@@ -70,7 +70,7 @@
     <Param val="1000" valType="num" updates="None" name="plPupilRemoteTimeoutMs"/>
     <Param val="False" valType="bool" updates="None" name="plPupillometryOnly"/>
     <Param val="psychopy_iohub_surface" valType="str" updates="None" name="plSurfaceName"/>
-    <Param val="0" valType="code" updates="None" name="runMode"/>
+    <Param val="1" valType="code" updates="None" name="runMode"/>
     <Param val="False" valType="bool" updates="None" name="rush"/>
     <Param val="time" valType="str" updates="None" name="sortColumns"/>
     <Param val="" valType="str" updates="None" name="tbLicenseFile"/>
@@ -100,10 +100,10 @@
       <CodeComponent name="Maze_Code" plugin="None">
         <Param val="&amp;#10;" valType="extendedCode" updates="constant" name="Before Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Before JS Experiment"/>
-        <Param val="import random&amp;#10;&amp;#10;# Colors&amp;#10;WALL_COLOR = (-.4, -.4, -.4)  # Dark Gray&amp;#10;PATH_COLOR = (.7, .7, .7)     # white&amp;#10;AGENT_COLOR = (-1, -1, 1)  # blue&amp;#10;GOAL_COLOR = (1, -1, -1)   # red&amp;#10;&amp;#10;class Maze:&amp;#10;    def __init__(self, size=8):&amp;#10;        self.size = size&amp;#10;        self.maze = [[1] * (2 * size + 1) for _ in range(2 * size + 1)]&amp;#10;        self.visited = set([])&amp;#10;        self.goal_location = None&amp;#10;        self.agent_location = None &amp;#10;        self.walls = set([])&amp;#10;        self.goal_reached = False&amp;#10;&amp;#10;    def generate_maze(self):&amp;#10;        start = (random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1)&amp;#10;        self.maze[start[1]][start[0]] = 0&amp;#10;        self.walk_maze(start)&amp;#10;        &amp;#10;        for x in range(1, self.size * 2, 2):&amp;#10;            for y in range(1, self.size * 2, 2):&amp;#10;                self.walls.add((x, y))&amp;#10;&amp;#10;        for _ in range(4):&amp;#10;            if not self.walls:&amp;#10;                break&amp;#10;            wall = random.choice(list(self.walls))&amp;#10;            self.maze[wall[1]][wall[0]] = 0&amp;#10;            self.walls.remove(wall)&amp;#10;            &amp;#10;        self.goal_location = [(self.size - 1) * 2 + 1, (self.size - 1) * 2 + 1]&amp;#10;&amp;#10;        while True:&amp;#10;            agent_start = [1, 1]&amp;#10;            if agent_start != self.goal_location:&amp;#10;                self.agent_location = agent_start&amp;#10;                break&amp;#10;&amp;#10;        return self.maze&amp;#10;        &amp;#10;    def walk_maze(self, s):&amp;#10;        self.visited.add(s)&amp;#10;        neighbors = self.neighbors(s)&amp;#10;        random.shuffle(neighbors)&amp;#10;&amp;#10;        for n in neighbors:&amp;#10;            if n not in self.visited:&amp;#10;                self.remove_wall(s, n)&amp;#10;                self.walk_maze(n)&amp;#10;                &amp;#10;    def neighbors(self, s):&amp;#10;        x, y = s&amp;#10;        potential_neighbors = [(x-2, y), (x+2, y), (x, y-2), (x, y+2)]&amp;#10;&amp;#10;        neighbors = []&amp;#10;        for n in potential_neighbors:&amp;#10;            nx, ny = n&amp;#10;            if 0 &lt;= nx &lt; self.size * 2 + 1 and 0 &lt;= ny &lt; self.size * 2 + 1:&amp;#10;                    neighbors.append((nx, ny))&amp;#10;                    &amp;#10;        return neighbors&amp;#10;        &amp;#10;    def remove_wall(self, s, n):&amp;#10;        sx, sy = s&amp;#10;        nx, ny = n&amp;#10;        &amp;#10;        if sx == nx:  # Vertical neighbors&amp;#10;            wall_pos = (sx, min(sy, ny) + 1)&amp;#10;            self.maze[wall_pos[1]][wall_pos[0]] = 0  # Remove horizontal wall&amp;#10;        elif sy == ny:  # Horizontal neighbors&amp;#10;            wall_pos = (min(sx, nx) + 1, sy)&amp;#10;            self.maze[wall_pos[1]][wall_pos[0]] = 0  # Remove vertical wall&amp;#10;&amp;#10;        self.maze[ny][nx] = 0  # Mark the new cell as a path&amp;#10;        self.walls.discard(wall_pos)&amp;#10;&amp;#10;    def teleport_agent(self):&amp;#10;        # Teleport agent to a random location, excluding the goal location&amp;#10;        while True:&amp;#10;            random_location = (random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1)&amp;#10;            if random_location != self.goal_location:&amp;#10;                return random_location&amp;#10;            &amp;#10;    def move_agent(self, key, pos):&amp;#10;        new_pos = pos[:]&amp;#10;        if key == 'up' or key == 'w':&amp;#10;            new_pos[1] += 1&amp;#10;        elif key == 'down' or key == 's':&amp;#10;            new_pos[1] -= 1&amp;#10;        elif key == 'left' or key == 'a':&amp;#10;            new_pos[0] -= 1&amp;#10;        elif key == 'right' or key == 'd':&amp;#10;            new_pos[0] += 1&amp;#10;&amp;#10;        c1 = 0 &lt;= new_pos[1] &lt; self.size*2&amp;#10;        c2 = 0 &lt;= new_pos[0] &lt; self.size*2&amp;#10;        &amp;#10;        if c1 and c2:&amp;#10;            if self.maze[new_pos[1]][new_pos[0]] == 0:&amp;#10;                self.agent_location = new_pos&amp;#10;                if self.agent_location == self.goal_location:&amp;#10;                    self.goal_reached = True&amp;#10;        else:&amp;#10;            self.agent_location = pos&amp;#10;            &amp;#10;&amp;#10;    def draw_maze(self):&amp;#10;        rects = []&amp;#10;        for y in range(len(self.maze)):&amp;#10;            for x in range(len(self.maze[0])):&amp;#10;                color = WALL_COLOR if self.maze[y][x] == 1 else PATH_COLOR&amp;#10;                rect = visual.Rect(win, width=cell_size, height=cell_size, fillColor=color, interpolate=True)&amp;#10;                rect.pos = [x * cell_size - (self.size * cell_size), y * cell_size - (self.size * cell_size)]&amp;#10;                rects.append(rect)&amp;#10;        return rects&amp;#10;&amp;#10;    def draw_agent(self):&amp;#10;        # Draw the agent&amp;#10;        ax, ay = self.agent_location&amp;#10;        agent = visual.Circle(win, radius=cell_size * player_size / 2, fillColor=AGENT_COLOR)&amp;#10;        if self.goal_reached:&amp;#10;            agent.fillColor = 'yellow'&amp;#10;        agent.pos = [ax * cell_size - (self.size * cell_size), ay * cell_size - (self.size * cell_size)]&amp;#10;        agent.draw()&amp;#10;&amp;#10;        # Draw the goal&amp;#10;        if not self.goal_reached:&amp;#10;            gx, gy = self.goal_location&amp;#10;            goal = visual.Rect(win, width=cell_size, height=cell_size, fillColor=GOAL_COLOR)&amp;#10;            goal.pos = [gx * cell_size - (self.size * cell_size), gy * cell_size - (self.size * cell_size)]&amp;#10;            goal.draw()" valType="extendedCode" updates="constant" name="Begin Experiment"/>
+        <Param val="import random&amp;#10;&amp;#10;# Colors&amp;#10;WALL_COLOR = (-.4, -.4, -.4)  # Dark Gray&amp;#10;PATH_COLOR = (.7, .7, .7)     # white&amp;#10;AGENT_COLOR = (-1, -1, 1)  # blue&amp;#10;GOAL_COLOR = (1, -1, -1)   # red&amp;#10;&amp;#10;class Maze:&amp;#10;    def __init__(self, size=8):&amp;#10;        self.size = size&amp;#10;        self.maze = [[1] * (2 * size + 1) for _ in range(2 * size + 1)]&amp;#10;        self.visited = set([])&amp;#10;        self.goal_location = None&amp;#10;        self.agent_location = None &amp;#10;        self.walls = set([])&amp;#10;        self.goal_reached = False&amp;#10;&amp;#10;    def generate_maze(self):&amp;#10;        start = (random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1)&amp;#10;        self.maze[start[1]][start[0]] = 0&amp;#10;        self.walk_maze(start)&amp;#10;        &amp;#10;        for x in range(1, self.size * 2, 2):&amp;#10;            for y in range(1, self.size * 2, 2):&amp;#10;                self.walls.add((x, y))&amp;#10;&amp;#10;        for _ in range(4):&amp;#10;            if not self.walls:&amp;#10;                break&amp;#10;            wall = random.choice(list(self.walls))&amp;#10;            self.maze[wall[1]][wall[0]] = 0&amp;#10;            self.walls.remove(wall)&amp;#10;            &amp;#10;        self.goal_location = [(self.size - 1) * 2 + 1, (self.size - 1) * 2 + 1]&amp;#10;&amp;#10;        while True:&amp;#10;            agent_start = [1, 1]&amp;#10;            if agent_start != self.goal_location:&amp;#10;                self.agent_location = agent_start&amp;#10;                break&amp;#10;&amp;#10;        return self.maze&amp;#10;        &amp;#10;    def walk_maze(self, s):&amp;#10;        self.visited.add(s)&amp;#10;        neighbors = self.neighbors(s)&amp;#10;        random.shuffle(neighbors)&amp;#10;&amp;#10;        for n in neighbors:&amp;#10;            if n not in self.visited:&amp;#10;                self.remove_wall(s, n)&amp;#10;                self.walk_maze(n)&amp;#10;                &amp;#10;    def neighbors(self, s):&amp;#10;        x, y = s&amp;#10;        potential_neighbors = [(x-2, y), (x+2, y), (x, y-2), (x, y+2)]&amp;#10;&amp;#10;        neighbors = []&amp;#10;        for n in potential_neighbors:&amp;#10;            nx, ny = n&amp;#10;            if 0 &lt;= nx &lt; self.size * 2 + 1 and 0 &lt;= ny &lt; self.size * 2 + 1:&amp;#10;                    neighbors.append((nx, ny))&amp;#10;                    &amp;#10;        return neighbors&amp;#10;        &amp;#10;    def remove_wall(self, s, n):&amp;#10;        sx, sy = s&amp;#10;        nx, ny = n&amp;#10;        &amp;#10;        if sx == nx:  # Vertical neighbors&amp;#10;            wall_pos = (sx, min(sy, ny) + 1)&amp;#10;            self.maze[wall_pos[1]][wall_pos[0]] = 0  # Remove horizontal wall&amp;#10;        elif sy == ny:  # Horizontal neighbors&amp;#10;            wall_pos = (min(sx, nx) + 1, sy)&amp;#10;            self.maze[wall_pos[1]][wall_pos[0]] = 0  # Remove vertical wall&amp;#10;&amp;#10;        self.maze[ny][nx] = 0  # Mark the new cell as a path&amp;#10;        self.walls.discard(wall_pos)&amp;#10;&amp;#10;    def teleport_agent(self):&amp;#10;        # Teleport agent to a random location, excluding the goal location&amp;#10;        while True:&amp;#10;            random_location = (random.randint(0, self.size - 1) * 2 + 1, random.randint(0, self.size - 1) * 2 + 1)&amp;#10;            if random_location != self.goal_location:&amp;#10;                return random_location&amp;#10;            &amp;#10;    def move_agent(self, key, pos):&amp;#10;        new_pos = pos[:]&amp;#10;        if key == 'up':&amp;#10;            new_pos[1] += 1&amp;#10;        elif key == 'down':&amp;#10;            new_pos[1] -= 1&amp;#10;        elif key == 'left':&amp;#10;            new_pos[0] -= 1&amp;#10;        elif key == 'right':&amp;#10;            new_pos[0] += 1&amp;#10;&amp;#10;        c1 = 0 &lt;= new_pos[1] &lt; self.size*2&amp;#10;        c2 = 0 &lt;= new_pos[0] &lt; self.size*2&amp;#10;        &amp;#10;        if c1 and c2:&amp;#10;            if self.maze[new_pos[1]][new_pos[0]] == 0:&amp;#10;                self.agent_location = new_pos&amp;#10;                if self.agent_location == self.goal_location:&amp;#10;                    self.goal_reached = True&amp;#10;        else:&amp;#10;            self.agent_location = pos&amp;#10;            &amp;#10;&amp;#10;    def draw_maze(self):&amp;#10;        rects = []&amp;#10;        for y in range(len(self.maze)):&amp;#10;            for x in range(len(self.maze[0])):&amp;#10;                color = WALL_COLOR if self.maze[y][x] == 1 else PATH_COLOR&amp;#10;                rect = visual.Rect(win, width=cell_size, height=cell_size, fillColor=color, interpolate=True)&amp;#10;                rect.pos = [x * cell_size - (self.size * cell_size), y * cell_size - (self.size * cell_size)]&amp;#10;                rects.append(rect)&amp;#10;        return rects&amp;#10;&amp;#10;    def draw_agent(self):&amp;#10;        # Draw the agent&amp;#10;        ax, ay = self.agent_location&amp;#10;        agent = visual.Circle(win, radius=cell_size * player_size / 2, fillColor=AGENT_COLOR)&amp;#10;        if self.goal_reached:&amp;#10;            agent.fillColor = 'yellow'&amp;#10;        agent.pos = [ax * cell_size - (self.size * cell_size), ay * cell_size - (self.size * cell_size)]&amp;#10;        agent.draw()&amp;#10;&amp;#10;        # Draw the goal&amp;#10;        if not self.goal_reached:&amp;#10;            gx, gy = self.goal_location&amp;#10;            goal = visual.Rect(win, width=cell_size, height=cell_size, fillColor=GOAL_COLOR)&amp;#10;            goal.pos = [gx * cell_size - (self.size * cell_size), gy * cell_size - (self.size * cell_size)]&amp;#10;            goal.draw()" valType="extendedCode" updates="constant" name="Begin Experiment"/>
         <Param val="import * as random from 'random';&amp;#10;function _pj_snippets(container) {&amp;#10;    function in_es6(left, right) {&amp;#10;        if (((right instanceof Array) || ((typeof right) === &quot;string&quot;))) {&amp;#10;            return (right.indexOf(left) &gt; (- 1));&amp;#10;        } else {&amp;#10;            if (((right instanceof Map) || (right instanceof Set) || (right instanceof WeakMap) || (right instanceof WeakSet))) {&amp;#10;                return right.has(left);&amp;#10;            } else {&amp;#10;                return (left in right);&amp;#10;            }&amp;#10;        }&amp;#10;    }&amp;#10;    container[&quot;in_es6&quot;] = in_es6;&amp;#10;    return container;&amp;#10;}&amp;#10;_pj = {};&amp;#10;_pj_snippets(_pj);&amp;#10;class Maze {&amp;#10;    constructor(size = 8) {&amp;#10;        this.size = size;&amp;#10;        this.maze = function () {&amp;#10;    var _pj_a = [], _pj_b = util.range(((2 * size) + 1));&amp;#10;    for (var _pj_c = 0, _pj_d = _pj_b.length; (_pj_c &lt; _pj_d); _pj_c += 1) {&amp;#10;        var _ = _pj_b[_pj_c];&amp;#10;        _pj_a.push(([1] * ((2 * size) + 1)));&amp;#10;    }&amp;#10;    return _pj_a;&amp;#10;}&amp;#10;.call(this);&amp;#10;        this.visited = set([]);&amp;#10;        this.goal_location = null;&amp;#10;        this.agent_location = null;&amp;#10;        this.walls = set([]);&amp;#10;        this.goal_reached = false;&amp;#10;    }&amp;#10;    generate_maze() {&amp;#10;        var agent_start, start, wall;&amp;#10;        start = [((Math.random.randint(0, (this.size - 1)) * 2) + 1), ((Math.random.randint(0, (this.size - 1)) * 2) + 1)];&amp;#10;        this.maze[start[1]][start[0]] = 0;&amp;#10;        this.walk_maze(start);&amp;#10;        for (var x, _pj_c = 0, _pj_a = util.range(1, (this.size * 2), 2), _pj_b = _pj_a.length; (_pj_c &lt; _pj_b); _pj_c += 1) {&amp;#10;            x = _pj_a[_pj_c];&amp;#10;            for (var y, _pj_f = 0, _pj_d = util.range(1, (this.size * 2), 2), _pj_e = _pj_d.length; (_pj_f &lt; _pj_e); _pj_f += 1) {&amp;#10;                y = _pj_d[_pj_f];&amp;#10;                this.walls.add([x, y]);&amp;#10;            }&amp;#10;        }&amp;#10;        for (var _, _pj_c = 0, _pj_a = util.range(4), _pj_b = _pj_a.length; (_pj_c &lt; _pj_b); _pj_c += 1) {&amp;#10;            _ = _pj_a[_pj_c];&amp;#10;            if ((! this.walls)) {&amp;#10;                break;&amp;#10;            }&amp;#10;            wall = Math.random.choice(list(this.walls));&amp;#10;            this.maze[wall[1]][wall[0]] = 0;&amp;#10;            this.walls.remove(wall);&amp;#10;        }&amp;#10;        this.goal_location = [(((this.size - 1) * 2) + 1), (((this.size - 1) * 2) + 1)];&amp;#10;        while (true) {&amp;#10;            agent_start = [1, 1];&amp;#10;            if ((agent_start !== this.goal_location)) {&amp;#10;                this.agent_location = agent_start;&amp;#10;                break;&amp;#10;            }&amp;#10;        }&amp;#10;        return this.maze;&amp;#10;    }&amp;#10;    walk_maze(s) {&amp;#10;        var neighbors;&amp;#10;        this.visited.add(s);&amp;#10;        neighbors = this.neighbors(s);&amp;#10;        Math.random.shuffle(neighbors);&amp;#10;        for (var n, _pj_c = 0, _pj_a = neighbors, _pj_b = _pj_a.length; (_pj_c &lt; _pj_b); _pj_c += 1) {&amp;#10;            n = _pj_a[_pj_c];&amp;#10;            if ((! _pj.in_es6(n, this.visited))) {&amp;#10;                this.remove_wall(s, n);&amp;#10;                this.walk_maze(n);&amp;#10;            }&amp;#10;        }&amp;#10;    }&amp;#10;    neighbors(s) {&amp;#10;        var neighbors, nx, ny, potential_neighbors, x, y;&amp;#10;        [x, y] = s;&amp;#10;        potential_neighbors = [[(x - 2), y], [(x + 2), y], [x, (y - 2)], [x, (y + 2)]];&amp;#10;        neighbors = [];&amp;#10;        for (var n, _pj_c = 0, _pj_a = potential_neighbors, _pj_b = _pj_a.length; (_pj_c &lt; _pj_b); _pj_c += 1) {&amp;#10;            n = _pj_a[_pj_c];&amp;#10;            [nx, ny] = n;&amp;#10;            if ((((0 &lt;= nx) &amp;&amp; (nx &lt; ((this.size * 2) + 1))) &amp;&amp; ((0 &lt;= ny) &amp;&amp; (ny &lt; ((this.size * 2) + 1))))) {&amp;#10;                neighbors.push([nx, ny]);&amp;#10;            }&amp;#10;        }&amp;#10;        return neighbors;&amp;#10;    }&amp;#10;    remove_wall(s, n) {&amp;#10;        var nx, ny, sx, sy, wall_pos;&amp;#10;        [sx, sy] = s;&amp;#10;        [nx, ny] = n;&amp;#10;        if ((sx === nx)) {&amp;#10;            wall_pos = [sx, (Math.min(sy, ny) + 1)];&amp;#10;            this.maze[wall_pos[1]][wall_pos[0]] = 0;&amp;#10;        } else {&amp;#10;            if ((sy === ny)) {&amp;#10;                wall_pos = [(Math.min(sx, nx) + 1), sy];&amp;#10;                this.maze[wall_pos[1]][wall_pos[0]] = 0;&amp;#10;            }&amp;#10;        }&amp;#10;        this.maze[ny][nx] = 0;&amp;#10;        this.walls.discard(wall_pos);&amp;#10;    }&amp;#10;    teleport_agent() {&amp;#10;        var random_location;&amp;#10;        while (true) {&amp;#10;            random_location = [((Math.random.randint(0, (this.size - 1)) * 2) + 1), ((Math.random.randint(0, (this.size - 1)) * 2) + 1)];&amp;#10;            if ((random_location !== this.goal_location)) {&amp;#10;                return random_location;&amp;#10;            }&amp;#10;        }&amp;#10;    }&amp;#10;    move_agent(key, pos) {&amp;#10;        var c1, c2, new_pos;&amp;#10;        new_pos = pos.slice(0);&amp;#10;        if (((key === &quot;up&quot;) || (key === &quot;w&quot;))) {&amp;#10;            new_pos[1] += 1;&amp;#10;        } else {&amp;#10;            if (((key === &quot;down&quot;) || (key === &quot;s&quot;))) {&amp;#10;                new_pos[1] -= 1;&amp;#10;            } else {&amp;#10;                if (((key === &quot;left&quot;) || (key === &quot;a&quot;))) {&amp;#10;                    new_pos[0] -= 1;&amp;#10;                } else {&amp;#10;                    if (((key === &quot;right&quot;) || (key === &quot;d&quot;))) {&amp;#10;                        new_pos[0] += 1;&amp;#10;                    }&amp;#10;                }&amp;#10;            }&amp;#10;        }&amp;#10;        c1 = ((0 &lt;= new_pos[1]) &amp;&amp; (new_pos[1] &lt; (this.size * 2)));&amp;#10;        c2 = ((0 &lt;= new_pos[0]) &amp;&amp; (new_pos[0] &lt; (this.size * 2)));&amp;#10;        if ((c1 &amp;&amp; c2)) {&amp;#10;            if ((this.maze[new_pos[1]][new_pos[0]] === 0)) {&amp;#10;                this.agent_location = new_pos;&amp;#10;                if ((this.agent_location === this.goal_location)) {&amp;#10;                    this.goal_reached = true;&amp;#10;                }&amp;#10;            }&amp;#10;        } else {&amp;#10;            this.agent_location = pos;&amp;#10;        }&amp;#10;    }&amp;#10;    draw_maze() {&amp;#10;        var color, rect, rects;&amp;#10;        rects = [];&amp;#10;        for (var y, _pj_c = 0, _pj_a = util.range(this.maze.length), _pj_b = _pj_a.length; (_pj_c &lt; _pj_b); _pj_c += 1) {&amp;#10;            y = _pj_a[_pj_c];&amp;#10;            for (var x, _pj_f = 0, _pj_d = util.range(this.maze[0].length), _pj_e = _pj_d.length; (_pj_f &lt; _pj_e); _pj_f += 1) {&amp;#10;                x = _pj_d[_pj_f];&amp;#10;                color = ((this.maze[y][x] === 1) ? WALL_COLOR : PATH_COLOR);&amp;#10;                rect = new visual.Rect(psychoJS.window, {&quot;width&quot;: cell_size, &quot;height&quot;: cell_size, &quot;fillColor&quot;: color, &quot;interpolate&quot;: true});&amp;#10;                rect.pos = [((x * cell_size) - (this.size * cell_size)), ((y * cell_size) - (this.size * cell_size))];&amp;#10;                rects.push(rect);&amp;#10;            }&amp;#10;        }&amp;#10;        return rects;&amp;#10;    }&amp;#10;    draw_agent() {&amp;#10;        var agent, ax, ay, goal, gx, gy;&amp;#10;        [ax, ay] = this.agent_location;&amp;#10;        agent = new visual.Circle(psychoJS.window, {&quot;radius&quot;: ((cell_size * player_size) / 2), &quot;fillColor&quot;: AGENT_COLOR});&amp;#10;        agent.pos = [((ax * cell_size) - (this.size * cell_size)), ((ay * cell_size) - (this.size * cell_size))];&amp;#10;        agent.draw();&amp;#10;        [gx, gy] = this.goal_location;&amp;#10;        goal = new visual.Rect(psychoJS.window, {&quot;width&quot;: cell_size, &quot;height&quot;: cell_size, &quot;fillColor&quot;: GOAL_COLOR});&amp;#10;        goal.pos = [((gx * cell_size) - (this.size * cell_size)), ((gy * cell_size) - (this.size * cell_size))];&amp;#10;        goal.draw();&amp;#10;    }&amp;#10;}&amp;#10;" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
         <Param val="console.log(continueRoutine);&amp;#10;WALL_COLOR = [(- 0.4), (- 0.4), (- 0.4)];&amp;#10;PATH_COLOR = [0.7, 0.7, 0.7];&amp;#10;AGENT_COLOR = [(- 1), (- 1), 1];&amp;#10;GOAL_COLOR = [1, (- 1), (- 1)];&amp;#10;maz = new Maze({&quot;size&quot;: 10});&amp;#10;maz.generate_maze();&amp;#10;cell_size = (0.4 / maz.size);&amp;#10;player_size = 0.9;&amp;#10;pressed_keys = [];&amp;#10;maze_cells = maz.draw_maze();&amp;#10;for (var cell, _pj_c = 0, _pj_a = maze_cells, _pj_b = _pj_a.length; (_pj_c &lt; _pj_b); _pj_c += 1) {&amp;#10;    cell = _pj_a[_pj_c];&amp;#10;    cell.draw();&amp;#10;}&amp;#10;Timer = new visual.TextStim({&quot;win&quot;: psychoJS.window, &quot;name&quot;: &quot;Timer&quot;, &quot;text&quot;: &quot;0&quot;, &quot;font&quot;: &quot;Arial&quot;, &quot;pos&quot;: [0, 0.45], &quot;draggable&quot;: false, &quot;height&quot;: 0.05, &quot;wrapWidth&quot;: null, &quot;ori&quot;: 0.0, &quot;color&quot;: &quot;white&quot;, &quot;colorSpace&quot;: &quot;rgb&quot;, &quot;opacity&quot;: null, &quot;languageStyle&quot;: &quot;LTR&quot;, &quot;depth&quot;: (- 1.0)});&amp;#10;" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
-        <Param val="# Initialize the maze&amp;#10;maz = Maze(size=12)&amp;#10;maz.generate_maze()&amp;#10;&amp;#10;# Set the size of the cells&amp;#10;cell_size = .4/maz.size&amp;#10;player_size = .9&amp;#10;&amp;#10;pressed_keys = []&amp;#10;&amp;#10;maze_cells = maz.draw_maze()&amp;#10;for cell in maze_cells:&amp;#10;    cell.draw()&amp;#10;    &amp;#10;Timer = visual.TextStim(win=win, name='Timer',&amp;#10;        text='0',&amp;#10;        font='Arial',&amp;#10;        pos=(0, .45), draggable=False, height=0.05, wrapWidth=None, ori=0.0, &amp;#10;        color='white', colorSpace='rgb', opacity=None, &amp;#10;        languageStyle='LTR',&amp;#10;        depth=-1.0);&amp;#10;        &amp;#10;Overlay = visual.Rect(&amp;#10;        win=win, name='Overlay',&amp;#10;        width=(.9, .9)[0], height=(.5, .5)[1],&amp;#10;        ori=0.0, pos=(0, 0), draggable=False, anchor='center',&amp;#10;        lineWidth=1.0,&amp;#10;        colorSpace='rgb', lineColor='white', fillColor='green',&amp;#10;        opacity=0.6, depth=-2.0, interpolate=True)&amp;#10;        &amp;#10;Countdown = False&amp;#10;skip_routine = False" valType="extendedCode" updates="constant" name="Begin Routine"/>
+        <Param val="# Initialize the maze&amp;#10;maz = Maze(size=11)&amp;#10;maz.generate_maze()&amp;#10;&amp;#10;# Set the size of the cells&amp;#10;cell_size = .4/maz.size&amp;#10;player_size = .9&amp;#10;&amp;#10;pressed_keys = []&amp;#10;&amp;#10;maze_cells = maz.draw_maze()&amp;#10;for cell in maze_cells:&amp;#10;    cell.draw()&amp;#10;    &amp;#10;Timer = visual.TextStim(win=win, name='Timer',&amp;#10;        text='0',&amp;#10;        font='Arial',&amp;#10;        pos=(0, .45), draggable=False, height=0.05, wrapWidth=None, ori=0.0, &amp;#10;        color='white', colorSpace='rgb', opacity=None, &amp;#10;        languageStyle='LTR',&amp;#10;        depth=-1.0);&amp;#10;        &amp;#10;Overlay = visual.Rect(&amp;#10;        win=win, name='Overlay',&amp;#10;        width=(.9, .9)[0], height=(.5, .5)[1],&amp;#10;        ori=0.0, pos=(0, 0), draggable=False, anchor='center',&amp;#10;        lineWidth=1.0,&amp;#10;        colorSpace='rgb', lineColor='white', fillColor='green',&amp;#10;        opacity=0.6, depth=-2.0, interpolate=True)&amp;#10;        &amp;#10;Countdown = False&amp;#10;skip_routine = False" valType="extendedCode" updates="constant" name="Begin Routine"/>
         <Param val="Py" valType="str" updates="None" name="Code Type"/>
         <Param val="t = routineTimer.getTime()&amp;#10;if not maz.goal_reached and t &lt; 20:&amp;#10;    keys = event.getKeys()&amp;#10;    for key in keys:&amp;#10;        maz.move_agent(key, maz.agent_location)&amp;#10;        break&amp;#10;    &amp;#10;    for cell in maze_cells:&amp;#10;        cell.draw()&amp;#10;    maz.draw_agent()&amp;#10;    Timer.setText(str(round(t)), log=False)&amp;#10;    Timer.draw()&amp;#10;    &amp;#10;else:&amp;#10;    if not Countdown:&amp;#10;        ts = t&amp;#10;        Countdown = True&amp;#10;        &amp;#10;    for cell in maze_cells:&amp;#10;        cell.draw()&amp;#10;    maz.draw_agent()&amp;#10;    &amp;#10;    if not maz.goal_reached:&amp;#10;        Overlay.fillColor = 'red'&amp;#10;        Overlay.opacity = 0.6&amp;#10;    Overlay.draw()&amp;#10;    &amp;#10;    text = 'Success!' if maz.goal_reached else 'Time Over!'&amp;#10;    Timer.setText(text)&amp;#10;    Timer.pos = (0.0)&amp;#10;    Timer.draw()&amp;#10;    &amp;#10;    if t - ts &gt;= 2:&amp;#10;        skip_routine = True" valType="extendedCode" updates="constant" name="Each Frame"/>
         <Param val="t = routineTimer.getTime();&amp;#10;if ((! maz.goal_reached)) {&amp;#10;    keys = psychoJS.eventManager.getKeys();&amp;#10;    for (var key, _pj_c = 0, _pj_a = keys, _pj_b = _pj_a.length; (_pj_c &lt; _pj_b); _pj_c += 1) {&amp;#10;        key = _pj_a[_pj_c];&amp;#10;        maz.move_agent(key, maz.agent_location);&amp;#10;    }&amp;#10;    for (var cell, _pj_c = 0, _pj_a = maze_cells, _pj_b = _pj_a.length; (_pj_c &lt; _pj_b); _pj_c += 1) {&amp;#10;        cell = _pj_a[_pj_c];&amp;#10;        cell.draw();&amp;#10;    }&amp;#10;    maz.draw_agent();&amp;#10;    Timer.setText(util.round(t).toString(), {&quot;log&quot;: false});&amp;#10;    Timer.draw();&amp;#10;    continueRoutine = true;&amp;#10;} else {&amp;#10;}&amp;#10;" valType="extendedCode" updates="constant" name="Each JS Frame"/>
@@ -144,8 +144,8 @@
         <Param val="" valType="list" updates="constant" name="vertices"/>
       </PolygonComponent>
     </Routine>
-    <Routine name="Questionnaire">
-      <RoutineSettingsComponent name="Questionnaire" plugin="None">
+    <Routine name="welcome">
+      <RoutineSettingsComponent name="welcome" plugin="None">
         <Param val="none" valType="str" updates="None" name="backgroundFit"/>
         <Param val="" valType="str" updates="None" name="backgroundImg"/>
         <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
@@ -154,48 +154,294 @@
         <Param val="False" valType="bool" updates="None" name="disabled"/>
         <Param val="" valType="code" updates="None" name="durationEstim"/>
         <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
-        <Param val="Questionnaire" valType="code" updates="None" name="name"/>
+        <Param val="welcome" valType="code" updates="None" name="name"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
         <Param val="" valType="code" updates="constant" name="skipIf"/>
         <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
         <Param val="" valType="code" updates="constant" name="stopVal"/>
         <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
       </RoutineSettingsComponent>
-      <FormComponent name="form" plugin="None">
-        <Param val="rows" valType="str" updates="constant" name="Data Format"/>
-        <Param val="Open Sans" valType="str" updates="constant" name="Font"/>
-        <Param val="0.05" valType="num" updates="constant" name="Item Padding"/>
-        <Param val="D:/Matin/stuff/NSC/code/NSC_model_overthinking/Online Task/questionnaire/questionnaire.xlsx" valType="file" updates="constant" name="Items"/>
-        <Param val="False" valType="bool" updates="constant" name="Randomize"/>
-        <Param val="dark" valType="str" updates="constant" name="Style"/>
-        <Param val="0.03" valType="num" updates="constant" name="Text Height"/>
-        <Param val="" valType="color" updates="constant" name="borderColor"/>
+      <TextComponent name="Welcome" plugin="None">
+        <Param val="Black" valType="color" updates="constant" name="color"/>
         <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
         <Param val="1" valType="num" updates="constant" name="contrast"/>
         <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
         <Param val="" valType="code" updates="None" name="durationEstim"/>
-        <Param val="" valType="color" updates="constant" name="fillColor"/>
-        <Param val="white" valType="color" updates="constant" name="itemColor"/>
-        <Param val="red" valType="color" updates="constant" name="markerColor"/>
-        <Param val="form" valType="code" updates="None" name="name"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial Bold" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.05" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="Welcome" valType="code" updates="None" name="name"/>
         <Param val="" valType="num" updates="constant" name="opacity"/>
-        <Param val="(0, .05)" valType="list" updates="constant" name="pos"/>
-        <Param val="white" valType="color" updates="constant" name="responseColor"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
-        <Param val="(1.2, .8)" valType="list" updates="constant" name="size"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="1.5" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="Thank you for participating&amp;#10;in our experiment" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+    </Routine>
+    <Routine name="questionnaire">
+      <RoutineSettingsComponent name="questionnaire" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="questionnaire" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <ImageComponent name="questionsimages" plugin="None">
+        <Param val="center" valType="str" updates="constant" name="anchor"/>
+        <Param val="$[1,1,1]" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="bool" updates="constant" name="flipHoriz"/>
+        <Param val="False" valType="bool" updates="constant" name="flipVert"/>
+        <Param val="$questions_images" valType="file" updates="set every repeat" name="image"/>
+        <Param val="linear" valType="str" updates="constant" name="interpolate"/>
+        <Param val="" valType="str" updates="constant" name="mask"/>
+        <Param val="questionsimages" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, .3)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="(1.2, 0.2)" valType="list" updates="constant" name="size"/>
         <Param val="" valType="code" updates="None" name="startEstim"/>
         <Param val="time (s)" valType="str" updates="None" name="startType"/>
         <Param val="0.0" valType="code" updates="None" name="startVal"/>
         <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
         <Param val="" valType="code" updates="constant" name="stopVal"/>
         <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="128" valType="num" updates="constant" name="texture resolution"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
         <Param val="" valType="code" updates="None" name="validator"/>
-      </FormComponent>
+      </ImageComponent>
+      <SliderComponent name="slider" plugin="None">
+        <Param val="White" valType="color" updates="constant" name="borderColor"/>
+        <Param val="LightGray" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="Red" valType="color" updates="constant" name="fillColor"/>
+        <Param val="False" valType="bool" updates="constant" name="flip"/>
+        <Param val="Open Sans" valType="str" updates="constant" name="font"/>
+        <Param val="False" valType="bool" updates="constant" name="forceEndRoutine"/>
+        <Param val="0" valType="num" updates="constant" name="granularity"/>
+        <Param val="" valType="code" updates="None" name="initVal"/>
+        <Param val="0,1,2,3,4" valType="list" updates="constant" name="labels"/>
+        <Param val="0.05" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="slider" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, -0.2)" valType="list" updates="constant" name="pos"/>
+        <Param val="False" valType="bool" updates="constant" name="readOnly"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="(1.0, 0.1)" valType="list" updates="constant" name="size"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="condition" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="constant" name="storeHistory"/>
+        <Param val="True" valType="bool" updates="constant" name="storeRating"/>
+        <Param val="True" valType="bool" updates="constant" name="storeRatingTime"/>
+        <Param val="()" valType="list" updates="constant" name="styleTweaks"/>
+        <Param val="radio" valType="str" updates="constant" name="styles"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="(0,1, 2, 3, 4)" valType="list" updates="constant" name="ticks"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+      </SliderComponent>
+      <KeyboardComponent name="next" plugin="None">
+        <Param val="'right'" valType="list" updates="set every repeat" name="allowedKeys"/>
+        <Param val="" valType="str" updates="constant" name="correctAns"/>
+        <Param val="" valType="str" updates="None" name="deviceLabel"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="True" valType="bool" updates="constant" name="discard previous"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="True" valType="bool" updates="constant" name="forceEndRoutine"/>
+        <Param val="next" valType="code" updates="None" name="name"/>
+        <Param val="press" valType="str" updates="constant" name="registerOn"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="last key" valType="str" updates="constant" name="store"/>
+        <Param val="False" valType="bool" updates="constant" name="storeCorrect"/>
+        <Param val="True" valType="bool" updates="constant" name="syncScreenRefresh"/>
+      </KeyboardComponent>
+      <MouseComponent name="mouse" plugin="None">
+        <Param val="" valType="list" updates="constant" name="clickable"/>
+        <Param val="" valType="list" updates="constant" name="correctAns"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="never" valType="str" updates="constant" name="forceEndRoutineOnPress"/>
+        <Param val="mouse" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="constant" name="newClicksOnly"/>
+        <Param val="never" valType="str" updates="None" name="saveMouseState"/>
+        <Param val="name," valType="list" updates="constant" name="saveParamsClickable"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="constant" name="storeCorrect"/>
+        <Param val="False" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="mouse onset" valType="str" updates="constant" name="timeRelativeTo"/>
+      </MouseComponent>
+    </Routine>
+    <Routine name="wait_for_maze">
+      <RoutineSettingsComponent name="wait_for_maze" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="wait_for_maze" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <TextComponent name="maze_explanation" plugin="None">
+        <Param val="black" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.05" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="maze_explanation" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="In the next part you are expected to solve 10 mazes in the given time. &amp;#10;you can move your charachter with arrow keys.&amp;#10;&amp;#10;press SPACE when ready" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+      <KeyboardComponent name="key_resp" plugin="None">
+        <Param val="'space'" valType="list" updates="constant" name="allowedKeys"/>
+        <Param val="" valType="str" updates="constant" name="correctAns"/>
+        <Param val="" valType="str" updates="None" name="deviceLabel"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="True" valType="bool" updates="constant" name="discard previous"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="True" valType="bool" updates="constant" name="forceEndRoutine"/>
+        <Param val="key_resp" valType="code" updates="None" name="name"/>
+        <Param val="press" valType="str" updates="constant" name="registerOn"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="last key" valType="str" updates="constant" name="store"/>
+        <Param val="False" valType="bool" updates="constant" name="storeCorrect"/>
+        <Param val="True" valType="bool" updates="constant" name="syncScreenRefresh"/>
+      </KeyboardComponent>
+    </Routine>
+    <Routine name="wait_a_sec">
+      <RoutineSettingsComponent name="wait_a_sec" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="wait_a_sec" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <TextComponent name="loading" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.05" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="loading" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val=".5" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="Loading" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
     </Routine>
   </Routines>
   <Flow>
-    <Routine name="Questionnaire"/>
-    <LoopInitiator loopType="TrialHandler" name="trials">
+    <Routine name="welcome"/>
+    <LoopInitiator loopType="TrialHandler" name="questionnaires_trials">
+      <Param name="Selected rows" updates="None" val="" valType="str"/>
+      <Param name="conditions" updates="None" val="[{'questions_images': 'que/q1.png'}, {'questions_images': 'que/q2.png'}, {'questions_images': 'que/q3.png'}, {'questions_images': 'que/q4.png'}, {'questions_images': 'que/q5.png'}, {'questions_images': 'que/q6.png'}, {'questions_images': 'que/q7.png'}, {'questions_images': 'que/q8.png'}, {'questions_images': 'que/q9.png'}, {'questions_images': 'que/q10.png'}, {'questions_images': 'que/q11.png'}, {'questions_images': 'que/q12.png'}, {'questions_images': 'que/q13.png'}, {'questions_images': 'que/q14.png'}, {'questions_images': 'que/q15.png'}]" valType="str"/>
+      <Param name="conditionsFile" updates="None" val="questioner.xlsx" valType="file"/>
+      <Param name="endPoints" updates="None" val="[0, 1]" valType="num"/>
+      <Param name="isTrials" updates="None" val="True" valType="bool"/>
+      <Param name="loopType" updates="None" val="sequential" valType="str"/>
+      <Param name="nReps" updates="None" val="1" valType="num"/>
+      <Param name="name" updates="None" val="questionnaires_trials" valType="code"/>
+      <Param name="random seed" updates="None" val="" valType="code"/>
+    </LoopInitiator>
+    <Routine name="questionnaire"/>
+    <LoopTerminator name="questionnaires_trials"/>
+    <Routine name="wait_for_maze"/>
+    <Routine name="wait_a_sec"/>
+    <LoopInitiator loopType="TrialHandler" name="maze_trials">
       <Param name="Selected rows" updates="None" val="" valType="str"/>
       <Param name="conditions" updates="None" val="None" valType="str"/>
       <Param name="conditionsFile" updates="None" val="" valType="file"/>
@@ -203,10 +449,10 @@
       <Param name="isTrials" updates="None" val="True" valType="bool"/>
       <Param name="loopType" updates="None" val="random" valType="str"/>
       <Param name="nReps" updates="None" val="10" valType="num"/>
-      <Param name="name" updates="None" val="trials" valType="code"/>
+      <Param name="name" updates="None" val="maze_trials" valType="code"/>
       <Param name="random seed" updates="None" val="" valType="code"/>
     </LoopInitiator>
     <Routine name="MazeRoutine"/>
-    <LoopTerminator name="trials"/>
+    <LoopTerminator name="maze_trials"/>
   </Flow>
 </PsychoPy2experiment>
