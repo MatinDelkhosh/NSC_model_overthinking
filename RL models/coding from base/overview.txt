@@ -1,0 +1,10 @@
+1. Maze environment definition
+2. GRU netwrok for the policy
+3. A2C policy algorithm
+4. Imaginator planner
+5. reward function
+6. training
+
+using:
+gymnasium
+Pytorch
