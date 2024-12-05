@@ -37,7 +37,7 @@ class A2C:
         self.gamma = gamma
 
         self.actor_critic = GRUNetwork(input_dim, hidden_dim, action_dim)
-        self.imaginator = Imaginator(input_dim + action_dim, hidden_dim, input_dim)
+        self.imaginator = Imaginator(input_dim + 1, hidden_dim, input_dim)
 
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=lr)
         self.imag_optimizer = optim.Adam(self.imaginator.parameters(), lr=lr)
@@ -48,26 +48,72 @@ class A2C:
         action_probs = torch.softmax(logits[0, -1], dim=-1)
         action = torch.multinomial(action_probs, 1).item()
         return action, hidden
+    
+    def train_actor_critic(self, state, action, reward, next_state, done, hidden):
+        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+        next_state_tensor = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+
+        # Initialize hidden state if it's None
+        if hidden is None:
+            hidden = torch.zeros(1, 1, self.actor_critic.gru.hidden_size)
+
+        # Get the value from the critic for the current state
+        _, critic_value, hidden = self.actor_critic(state_tensor, hidden)
+        # Get the value from the critic for the next state
+        _, next_critic_value, _ = self.actor_critic(next_state_tensor, hidden)
+
+        # Calculate the target value
+        target_value = reward + (0 if done else self.gamma * next_critic_value.item())
+
+        # Calculate the critic loss
+        critic_loss = nn.MSELoss()(critic_value, torch.tensor([[target_value]], dtype=torch.float32))
+        self.optimizer.zero_grad()
+        critic_loss.backward()
+        self.optimizer.step()
+
+        # Calculate the advantage
+        advantage = target_value - critic_value.item()
+
+        # Calculate the actor loss
+        logits, _, _ = self.actor_critic(state_tensor, hidden)
+        action_probs = torch.softmax(logits[0, -1], dim=-1)
+        actor_loss = -torch.log(action_probs[action]) * advantage
+
+        # Optimize the actor and critic
+        self.optimizer.zero_grad()  # Clear previous gradients
+        actor_loss.backward()  # Backward pass to compute gradients
+        self.optimizer.step()  # Update parameters
 
     def train(self, num_episodes=1000):
         hidden = None
 
+        total_steps = 0
         for episode in range(num_episodes):
             state = self.env.reset()
             episode_reward = 0
             done = False
 
+            steps = 0
             while not done:
                 action, hidden = self.select_action(state, hidden)
                 next_state, reward, done = self.env.step(action)
                 episode_reward += reward
+                steps += 1
+                if steps >= 50 and not done:
+                    done = True
+                    episode_reward -= 5
+
+                # Train actor-critic
+                self.train_actor_critic(state, action, reward, next_state, done, hidden)
 
                 # Train imaginator
                 self.train_imaginator(state, action, next_state)
 
                 state = next_state
 
-            print(f"Episode {episode + 1}: Reward = {episode_reward}")
+            print(f"\rEpisode {episode + 1}:\tReward = {round(episode_reward,2)},     \t\tSteps = {steps}\t",end='')
+            total_steps += steps
+            if episode % 20 == 0: print(f'\tmean steps: {total_steps/20}'); total_steps = 0
 
     def train_imaginator(self, state, action, next_state):
         state_action = np.concatenate([state, [action]])
@@ -84,6 +130,10 @@ class SimpleMazeEnv:
         self.state = np.zeros(size)
         self.goal = (size[0] - 1, size[1] - 1)
         self.agent_pos = (0, 0)
+        self.cross = ((size[0]-1)**2 + (size[1]-1)**2)**.5
+
+    def distance_calculator(self):
+        self.distance = ((self.goal[0] - self.agent_pos[0])**2 + (self.goal[1]-self.agent_pos[1])**2)**.5
 
     def reset(self):
         self.agent_pos = (0, 0)
@@ -100,7 +150,8 @@ class SimpleMazeEnv:
 
         self.agent_pos = (x, y)
         done = self.agent_pos == self.goal
-        reward = 1 if done else -0.01
+        self.distance_calculator()
+        reward = 10 if done else -self.distance/(self.cross) / 10
         return self._get_state(), reward, done
 
     def _get_state(self):
@@ -115,4 +166,4 @@ hidden_dim = 128
 action_dim = 4  # Up, Down, Left, Right
 
 agent = A2C(env, input_dim, hidden_dim, action_dim)
-agent.train(num_episodes=100)
+agent.train(num_episodes=1000)
