@@ -48,7 +48,7 @@ class A2C:
         action_probs = torch.softmax(logits[0, -1], dim=-1)
         action = torch.multinomial(action_probs, 1).item()
         return action, hidden
-    
+
     def train_actor_critic(self, state, action, reward, next_state, done, hidden):
         # Convert state and next_state to tensors
         state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).unsqueeze(0)  # [Batch=1, Seq=1, Input_dim]
@@ -94,6 +94,7 @@ class A2C:
         hidden = None
 
         total_steps = 0
+        total_reward = 0
         for episode in range(num_episodes):
             state = self.env.reset()
             episode_reward = 0
@@ -105,7 +106,7 @@ class A2C:
                 next_state, reward, done = self.env.step(action)
                 episode_reward += reward
                 steps += 1
-                if steps >= 50 and not done:
+                if steps >= 100 and not done:
                     done = True
                     episode_reward -= 5
 
@@ -119,7 +120,8 @@ class A2C:
 
             print(f"\rEpisode {episode + 1}:\tReward = {round(episode_reward,2)},     \t\tSteps = {steps}\t",end='')
             total_steps += steps
-            if episode % 20 == 0: print(f'\tmean steps: {total_steps/20}'); total_steps = 0
+            total_reward += episode_reward
+            if episode % 20 == 0: print(f'\tmean steps: {total_steps/20} \tmean reward: {round(total_reward/20,2)}'); total_steps = 0; total_reward = 0
 
     def train_imaginator(self, state, action, next_state):
         state_action = np.concatenate([state, [action]])
@@ -157,7 +159,7 @@ class SimpleMazeEnv:
         self.agent_pos = (x, y)
         done = self.agent_pos == self.goal
         self.distance_calculator()
-        reward = 10 if done else -self.distance/(self.cross) / 10
+        reward = 10 if done else -self.distance/(self.cross) / 5
         return self._get_state(), reward, done
 
     def _get_state(self):
