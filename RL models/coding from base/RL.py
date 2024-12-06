@@ -50,39 +50,45 @@ class A2C:
         return action, hidden
     
     def train_actor_critic(self, state, action, reward, next_state, done, hidden):
-        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+        # Convert state and next_state to tensors
+        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).unsqueeze(0)  # [Batch=1, Seq=1, Input_dim]
         next_state_tensor = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
 
-        # Initialize hidden state if it's None
+        # Initialize hidden state if None
         if hidden is None:
             hidden = torch.zeros(1, 1, self.actor_critic.gru.hidden_size)
 
-        # Get the value from the critic for the current state
-        _, critic_value, hidden = self.actor_critic(state_tensor, hidden)
-        # Get the value from the critic for the next state
-        _, next_critic_value, _ = self.actor_critic(next_state_tensor, hidden)
+        # Detach hidden state to avoid gradient through time
+        hidden = hidden.detach()
+
+        # Forward pass for the current state
+        logits, critic_value, hidden = self.actor_critic(state_tensor, hidden)
+
+        # Forward pass for the next state (detached hidden state)
+        with torch.no_grad():  # Avoid computing gradients for next state
+            _, next_critic_value, _ = self.actor_critic(next_state_tensor, hidden.detach())
 
         # Calculate the target value
         target_value = reward + (0 if done else self.gamma * next_critic_value.item())
 
-        # Calculate the critic loss
+        # Critic loss (Mean Squared Error between current value and target value)
         critic_loss = nn.MSELoss()(critic_value, torch.tensor([[target_value]], dtype=torch.float32))
-        self.optimizer.zero_grad()
-        critic_loss.backward()
-        self.optimizer.step()
 
         # Calculate the advantage
         advantage = target_value - critic_value.item()
 
-        # Calculate the actor loss
-        logits, _, _ = self.actor_critic(state_tensor, hidden)
-        action_probs = torch.softmax(logits[0, -1], dim=-1)
+        # Actor loss (Policy Gradient with advantage)
+        action_probs = torch.softmax(logits[0, -1], dim=-1)  # Action probabilities for the last step
         actor_loss = -torch.log(action_probs[action]) * advantage
 
-        # Optimize the actor and critic
-        self.optimizer.zero_grad()  # Clear previous gradients
-        actor_loss.backward()  # Backward pass to compute gradients
-        self.optimizer.step()  # Update parameters
+        # Combine losses
+        total_loss = actor_loss + critic_loss
+
+        # Optimize both actor and critic
+        self.optimizer.zero_grad()
+        total_loss.backward()
+        self.optimizer.step()
+
 
     def train(self, num_episodes=1000):
         hidden = None
