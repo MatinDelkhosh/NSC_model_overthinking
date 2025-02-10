@@ -170,7 +170,7 @@ class SimpleMazeEnv:
 # Instantiate Environment and A2C Agent
 env = SimpleMazeEnv(size=(5, 5))
 input_dim = env.size[0] * env.size[1]
-hidden_dim = 128
+hidden_dim = 32
 action_dim = 4  # Up, Down, Left, Right
 
 agent = A2C(env, input_dim, hidden_dim, action_dim)
