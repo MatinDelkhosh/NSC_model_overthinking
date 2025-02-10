@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Puzzle Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: rgb(90, 90, 90);
+        }
+        canvas {
+            border: 1px solid rgb(133, 133, 133);
+            display: none;
+            max-width: 70vw;
+            max-height: 60vh;
+        }
+
+        h1 {font-size: min(6vw,8vh);}
+        h2 {font-size: min(4vw,4vh);}
+        h3 {font-size: min(3vw,3vh);}
+
+        #controls {
+            margin: 10px;
+            display: none;
+        }
+        #cooldown { 
+            display: none;
+            text-align: center;
+        }
+        #coolbtn {
+            margin-top: 1vh;
+        }
+        #questionnaire {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Maze Puzzle Game</h1>
+    
+    <div id="questionnaire">
+        <h2>Before you start, answer these questions:</h2>
+        <div id="questionsContainer" style="display:none;"></div><br><br>
+        <button margin-top=20dvh onclick="startMazeSequence()">Submit & Start</button>
+    </div>
+
+    <script>
+        const questions = [
+            "How much do you enjoy solving puzzles?",
+            "How would you rate your problem-solving skills?",
+            "How often do you play video games?",
+            "How comfortable are you with using technology?",
+            "How much time do you usually spend on games?"
+        ];
+        
+        function createQuestionnaire() {
+        const container = document.getElementById('questionsContainer');
+        questions.forEach((question, index) => {
+            const questionDiv = document.createElement('div'); // Changed questionHtml to questionDiv and createElement
+            questionDiv.innerHTML =
+                "<br><h3>" + question + "</h3>" +
+                [0, 1, 2, 3, 4, 5].map(option =>
+                    "<label>" +
+                    "<input type='radio' name='question" + index + "' value='" + option + "'> " + option +
+                    "</label>"
+                ).join('');
+
+            container.appendChild(questionDiv); // Use appendChild to add the created div
+        });
+
+        // Optionally, show the questions after creation
+        container.style.display = 'block';
+    }
+
+    window.onload = createQuestionnaire;
+    </script>
+    
+    <canvas id="mazeCanvas" width="400" height="400"></canvas>
+    <div id="controls">
+        <button onclick="resetGame()">Reset</button>
+        <p id="timer">Time: 0s</p>
+    </div>
+    
+    <div id="cooldown">
+        <h2 id="cooltext">Get ready for your next maze!</h2>
+        <button id="coolbtn" onclick="startMazeSequence()">Start next Maze</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const questionnaire = document.getElementById('questionnaire');
+        const cooldown = document.getElementById('cooldown');
+        const cooltext = document.getElementById('cooltext');
+        const controls = document.getElementById('controls');
+        let maze, player, timer, timerInterval, mazeCount = 0;
+        const totalMazes = 10;
+        const mazeSize = 21;
+        const cellSize = canvas.width / mazeSize;
+
+        function startMazeSequence() {
+            if (mazeCount < totalMazes) {
+                questionnaire.style.display = 'none';
+                cooldown.style.display = 'none'
+                canvas.style.display = 'block';
+                controls.style.display = 'block';
+                startGame();
+            } else {
+                questionnaire.style.display = 'block';
+                cooldown.style.display = 'none';
+                mazeCount = 0;
+            }
+        }
+
+        function generateMazeKruskal() {
+            maze = Array.from({ length: mazeSize }, () => Array(mazeSize).fill(0));
+            
+            const sets = new Map();
+            function findSet(cell) {
+                if (sets.get(cell) !== cell) {
+                    sets.set(cell, findSet(sets.get(cell))); 
+                }
+                return sets.get(cell);
+            }
+            function unionSets(cell1, cell2) {
+                sets.set(findSet(cell2), findSet(cell1));
+            }
+
+            for (let y = 0; y < mazeSize; y += 2) {
+                for (let x = 0; x < mazeSize; x += 2) {
+                    let cell = `${x},${y}`;
+                    sets.set(cell, cell);
+                    maze[y][x] = 1;
+                }
+            }
+
+            const walls = [];
+            for (let y = 0; y < mazeSize; y += 2) {
+                for (let x = 0; x < mazeSize; x += 2) {
+                    if (x + 2 < mazeSize) walls.push({ x1: x, y1: y, x2: x + 2, y2: y });
+                    if (y + 2 < mazeSize) walls.push({ x1: x, y1: y, x2: x, y2: y + 2 });
+                }
+            }
+            walls.sort(() => Math.random() - 0.5);
+
+            for (const wall of walls) {
+                const { x1, y1, x2, y2 } = wall;
+                let set1 = findSet(`${x1},${y1}`);
+                let set2 = findSet(`${x2},${y2}`);
+
+                if (set1 !== set2) {
+                    unionSets(set1, set2);
+                    maze[y1][x1] = 1;
+                    maze[y2][x2] = 1;
+                    maze[(y1 + y2) / 2][(x1 + x2) / 2] = 1;
+                }
+            }
+
+            maze[0][0] = 1;
+            maze[mazeSize - 1][mazeSize - 1] = 1;
+        }
+
+        function drawMaze() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let row = 0; row < mazeSize; row++) {
+                for (let col = 0; col < mazeSize; col++) {
+                    ctx.fillStyle = maze[row][col] === 1 ? 'white' : 'black';
+                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    if (row === mazeSize - 1 && col === mazeSize - 1) {
+                        ctx.fillStyle = 'green';
+                        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+            ctx.fillStyle = 'red';
+            ctx.fillRect(player.x * cellSize, player.y * cellSize, cellSize, cellSize);
+        }
+
+        function startGame() {
+            if (mazeCount >= totalMazes) {
+                alert("Congratulations! You completed all mazes.");
+                return;
+            }
+            generateMazeKruskal();
+            player = { x: 0, y: 0 };
+            timer = 0;
+            document.getElementById('timer').innerText = 'Time: 0s';
+            timerInterval = setInterval(() => {
+                timer++;
+                document.getElementById('timer').innerText = `Time: ${timer}s`;
+            }, 1000);
+            drawMaze();
+            document.addEventListener('keydown', movePlayer);
+        }
+
+        function resetGame() {
+            clearInterval(timerInterval);
+            document.removeEventListener('keydown', movePlayer);
+            startGame();
+        }
+
+        function movePlayer(event) {
+            let newX = player.x;
+            let newY = player.y;
+            switch (event.key) {
+                case 'ArrowUp': newY--; break;
+                case 'ArrowDown': newY++; break;
+                case 'ArrowLeft': newX--; break;
+                case 'ArrowRight': newX++; break;
+            }
+            if (newX >= 0 && newX < mazeSize && newY >= 0 && newY < mazeSize && maze[newY][newX] === 1) {
+                player.x = newX;
+                player.y = newY;
+                drawMaze();
+                checkWin();
+            }
+        }
+
+        function checkWin() {
+            if (player.x === mazeSize - 1 && player.y === mazeSize - 1) {
+                clearInterval(timerInterval);
+                mazeCount++;
+                player = { x: 0, y: 0 };
+                timer = 0;
+                if (mazeCount < totalMazes) {
+                    canvas.style.display = 'none';
+                    controls.style.display = 'none';
+                    cooldown.style.display = 'block';
+                    cooltext.innerText = `You completed maze ${mazeCount}/${totalMazes}!`;
+                } else {
+                    canvas.style.display = 'none';
+                    controls.style.display = 'none';
+                    cooldown.style.display = 'block';
+                    cooltext.innerText = `You completed all mazes ${mazeCount}/${totalMazes}!`;
+                    document.getElementById('coolbtn').innerText = "Restart (progress will be lost!)";
+                }
+            }
+        }
+    </script>
+</body>
+</html>
