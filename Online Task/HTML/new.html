@@ -19,75 +19,226 @@
             max-height: 60vh;
         }
 
+        #gamePage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: rgb(90, 90, 90);
+        }
+
         h1 {font-size: min(6vw,8vh);}
         h2 {font-size: min(4vw,4vh);}
         h3 {font-size: min(3vw,3vh);}
 
         #controls {
-            margin: 10px;
             display: none;
+            align-items: center;
+            justify-content: center;
+            margin: min(2vh,2vw);
+        }
+        #controls div {
+            display: flex;
+            justify-content: center;
+        }
+        #controls p {
+            text-align: center;
         }
         #cooldown { 
             display: none;
             text-align: center;
+            justify-content: center;
+            flex-direction: column;
         }
-        #coolbtn {
+        #cooldown button {
             margin-top: 1vh;
+        }
+        #savebtn {
+            display: none;
+        }
+      	#Language {
+          	background-color: rgba(255, 255, 255, 0.1);
+            padding: 2%;
+            display: flex;
+            flex-direction: column;
+        }
+      	#Language div{
+			display: flex;
+          	justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+        }
+        #startbtn{
+            font-size: min(5vw,3vh);
         }
         #questionnaire {
             text-align: center;
+            display: none;
+        }
+        #questionsContainer div {
+            padding: 1%;
+            background-color: rgba(255, 255, 255, 0.1);
+            font-size: min(4vw,3vh);
+        }
+        #mobileControls {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 70%;
+            height: 40vh;
+            max-width: min(70vw,40vh);
+            max-height: min(50vw,40vh);
+        }   
+        #mobileControls > div {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            width: 100%;
+        }
+        #mobileControls button {
+            margin-top: 10px;
+            font-size: min(8dvw,8dvh);
+            align-items: center;
+            height: 100%;
+            width: 30%;
+            max-height: 100%;
+            max-width: 30%;
+            min-width: 25%;
+            justify-content: center;
         }
     </style>
 </head>
 <body>
     <h1>Maze Puzzle Game</h1>
+  
+  	<div id="Language">
+          
+    		<h3>Choose Your Questionnaire Language:</h3>
+        <div><input type="radio" name="Lang" checked="true" Value="Fa">Persian</input>
+      	<input type="radio" name="Lang" Value="En">English</input></div><br>
+        <div><button onclick="createQuestionnaire()" id="startbtn">Start</button></div><br>
+  
+  		<h3>if you just want to play the maze use this button</h3>
+        <div><button onclick="startMazeSequenceNoSave()">play for fun!</button></div>
+        
+  
+    </div>
+    <br>
     
     <div id="questionnaire">
-        <h2>Before you start, answer these questions:</h2>
+      
+        <h2 id="questionnaireText">Before you start, answer these questions:</h2>
+        
         <div id="questionsContainer" style="display:none;"></div><br><br>
-        <button margin-top=20dvh onclick="startMazeSequence()">Submit & Start</button>
+        <button margin-top=20dvh onclick="collectQuestionnaireData()">Submit & Start</button>
     </div>
 
     <script>
-        const questions = [
-            "How much do you enjoy solving puzzles?",
-            "How would you rate your problem-solving skills?",
-            "How often do you play video games?",
-            "How comfortable are you with using technology?",
-            "How much time do you usually spend on games?"
+        const FaQuestions = [ 
+            "فکرهای شبیه به هم مدام، دوباره و دوباره به ذهنم می آیند",
+            "این فکرها به ذهنم هجوم می آورند",
+            "انگار این فکر ها در ذهنم جا خوش کرده اند و من نمی توانم آنها را متوقف کنم",
+            "من به خیلی از مشکالت فکر میکنم، بدون اینکه هیچ یک از آنها را حل کنم",
+            "در حالی که دارم به مشکالتم فکر میکنم، نمی توانم هیچ کار دیگری انجام دهم",
+            "افکارم خود به خود تکرار می شوند",
+            "افکار بدون اینکه خودم بخواهم، به ذهنم می آیند",
+            "ذهن من روی موضوع های مشخصی می ماند بطوری که نمی توانم از آن خلاص شوم",
+            "دائماً سؤالاتی از خودم میپرسم بدون اینکه برای آنها جوابی بیابم",
+            "افکارم مانع تمرکزم روزی مسائل دیگری می شوند",
+            "فکرم مدام مشغول یک موضوع تکراری است",
+            "افکار، ناگهانی به ذهنم خطور می کنند",
+            "احساس می کنم که انگار مجبورم در مورد یک مسئله تکراری فکر کنم",
+            "این دسته از افکارم کمک چندانی به من نمی کنند",
+            "افکارم تمام توجه ام را به خود مشغول کرده اند"
         ];
+
+        const EnQuestions = [
+            "The same thoughts keep going through my mind again and again",
+            "Thoughts intrude into my mind",
+            "I can't stop dwelling on them",
+            "I think about many problems without solving any of them",
+            "I can't do anything else while thinking about my problems",
+            "My thoughts repeat themselves",
+            "Thoughts come to my mind without my wanting them to",
+            "I get stuck on certain issues and can't move on",
+            "I constantly ask myself questions without finding any answers",
+            "My thoughts prevent me from focusing on other things",
+            "I keep thinking about the same issue all the time",
+            "Thoughts just pop into my mind",
+            "I feel driven to continue dwelling on the same issue",
+            "My thoughts are not much help to me",
+            "My thoughts take up all my attention"
+        ]
+        
+        let Questions;        
         
         function createQuestionnaire() {
-        const container = document.getElementById('questionsContainer');
-        questions.forEach((question, index) => {
-            const questionDiv = document.createElement('div'); // Changed questionHtml to questionDiv and createElement
-            questionDiv.innerHTML =
-                "<br><h3>" + question + "</h3>" +
-                [0, 1, 2, 3, 4, 5].map(option =>
-                    "<label>" +
-                    "<input type='radio' name='question" + index + "' value='" + option + "'> " + option +
-                    "</label>"
-                ).join('');
 
-            container.appendChild(questionDiv); // Use appendChild to add the created div
-        });
+            if (document.querySelector(`input[name="Lang"]:checked`).value == "Fa") {
+                Questions = FaQuestions;
+                document.getElementById('questionnaireText').innerHTML =
+                    "هرگز-0    به ندرت-1    گاهی-2    بیشتر-3     همیشه-4";
+                ;
+            } else {
+                Questions = EnQuestions;
+                document.getElementById('questionnaireText').innerHTML =
+                    "0-never 1-hardly ever 2-often 3-usually 4-always";
+                ;
+            }
+            
+            document.getElementById('questionnaire').style.display = 'block';
+            document.getElementById('Language').style.display = 'none';
+            document.getElementById('mazeCanvas').style.display = 'none';
+            document.getElementById('controls').style.display = 'none';
+            document.getElementById('mobileControls').style.display = 'none';
+            document.getElementById('cooldown').style.display = 'none';
+            playerData.mazeRuns.pop()
 
-        // Optionally, show the questions after creation
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = ""
+            Questions.forEach((question, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.innerHTML =
+                    "<div><h3>" + question + "</h3></div><div>" +
+                    [0, 1, 2, 3, 4].map(option =>
+                        "<label>" +
+                        "<input type='radio' name='question" + index + "' value='" + option + "'> " + option +
+                        "</label>"
+                    ).join('') + "</div>";
+
+                container.appendChild(questionDiv);
+            });
+
         container.style.display = 'block';
     }
-
-    window.onload = createQuestionnaire;
     </script>
-    
+
+    <div id="gamePage">
+
     <canvas id="mazeCanvas" width="400" height="400"></canvas>
     <div id="controls">
-        <button onclick="resetGame()">Reset</button>
-        <p id="timer">Time: 0s</p>
+        <div><button id="resetbtn" onclick="resetGame()">Reset this Maze</button></div>
+        <div><p id="timer">Time: 0s</p></div>
     </div>
     
+    </div>
+
+    
+    <div id="mobileControls">
+        <div>
+            <button onclick="movePlayer({ key: 'ArrowUp' })">↑</button>
+        </div>
+        <div>
+            <button onclick="movePlayer({ key: 'ArrowLeft' })">←</button>
+            <button onclick="movePlayer({ key: 'ArrowDown' })">↓</button>
+            <button onclick="movePlayer({ key: 'ArrowRight' })">→</button>
+        </div>
+    </div>
+
     <div id="cooldown">
         <h2 id="cooltext">Get ready for your next maze!</h2>
         <button id="coolbtn" onclick="startMazeSequence()">Start next Maze</button>
+        <button id="playmore" display="none" onclick="startMazeSequenceNoSave()">continue playing just for fun</button>
     </div>
 
     <script>
@@ -98,23 +249,75 @@
         const cooltext = document.getElementById('cooltext');
         const controls = document.getElementById('controls');
         let maze, player, timer, timerInterval, mazeCount = 0;
-        const totalMazes = 10;
-        const mazeSize = 21;
+        let totalMazes = 10;
+        const mazeSize = 27;
         const cellSize = canvas.width / mazeSize;
+        let save = true; // option to not send the data to the server
+        const participantID = Date.now();
 
-        function startMazeSequence() {
-            if (mazeCount < totalMazes) {
-                questionnaire.style.display = 'none';
-                cooldown.style.display = 'none'
-                canvas.style.display = 'block';
-                controls.style.display = 'block';
-                startGame();
+        let playerData = {
+            questionnaire: {},
+            mazeRuns: []
+        };
+
+        function collectQuestionnaireData() {
+            let allAnswered = true;
+            Questions.forEach((question, index) => {
+                const selectedOption = document.querySelector(`input[name="question${index}"]:checked`);
+                if (!selectedOption) {
+                    allAnswered = false;
+                }
+                playerData.questionnaire[`Q${index + 1}`] = selectedOption ? selectedOption.value : "No answer";
+            });
+            if (!allAnswered) {
+                alert("Please answer all the questions before starting the maze.");
             } else {
-                questionnaire.style.display = 'block';
-                cooldown.style.display = 'none';
-                mazeCount = 0;
+                startMazeSequenceSave();
             }
         }
+
+        function logMovement(direction, valid) {
+            if (mazeCount > totalMazes) { 
+                return;
+            }
+            let currentRun = playerData.mazeRuns[playerData.mazeRuns.length - 1]; // Get latest maze
+            currentRun.movements.push({ 
+                direction, 
+                valid, 
+                time: new Date().toISOString() 
+            });
+        }
+
+        function startMazeSequence() {
+            document.getElementById('coolbtn').innerText = "Start next Maze";
+            questionnaire.style.display = 'none';
+            cooldown.style.display = 'none'
+            canvas.style.display = 'block';
+            controls.style.display = 'block';
+            startGame();
+        }
+
+        function startMazeSequenceNoSave() {
+            document.getElementById('Language').style.display = 'none';
+            mazeCount = 0;
+            totalMazes = 20;
+            save = false;
+            startMazeSequence()
+        }
+
+        function startMazeSequenceSave() {
+            mazeCount = 0;
+            totalMazes = 10;
+            save = true;
+            startMazeSequence()
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            }
 
         function generateMazeKruskal() {
             maze = Array.from({ length: mazeSize }, () => Array(mazeSize).fill(0));
@@ -145,7 +348,7 @@
                     if (y + 2 < mazeSize) walls.push({ x1: x, y1: y, x2: x, y2: y + 2 });
                 }
             }
-            walls.sort(() => Math.random() - 0.5);
+            shuffle(walls);
 
             for (const wall of walls) {
                 const { x1, y1, x2, y2 } = wall;
@@ -181,64 +384,122 @@
         }
 
         function startGame() {
-            if (mazeCount >= totalMazes) {
-                alert("Congratulations! You completed all mazes.");
-                return;
-            }
             generateMazeKruskal();
+
+            // Save maze layout for this run
+            let newMaze = {
+                mazeLayout: maze.map(row => [...row]), // Copy maze layout
+                movements: [] // Empty array to store movements
+            };
+            if (mazeCount <= totalMazes && save) {
+                playerData.mazeRuns.push(newMaze);
+            }
+            console.log(playerData)
             player = { x: 0, y: 0 };
             timer = 0;
+            if (save) {
+                logMovement('start',true);}
             document.getElementById('timer').innerText = 'Time: 0s';
+            document.getElementById('resetbtn').style.display = 'block';
             timerInterval = setInterval(() => {
                 timer++;
                 document.getElementById('timer').innerText = `Time: ${timer}s`;
             }, 1000);
-            drawMaze();
+            document.getElementById('mobileControls').style.display = 'flex';
             document.addEventListener('keydown', movePlayer);
+            drawMaze();
         }
 
         function resetGame() {
+            if (save) {
+                logMovement('reset',true);}
+            // playerData.mazeRuns.pop()
             clearInterval(timerInterval);
             document.removeEventListener('keydown', movePlayer);
             startGame();
         }
 
+        function restartGame() {
+            playerData = {questionnaire: {}, mazeRuns: []};
+            mazeCount = 0;
+            canvas.style.display = 'none';
+            cooldown.style.display = 'none';
+            controls.style.display = 'none';
+            questionnaire.style.display = 'block';
+        }
+
         function movePlayer(event) {
             let newX = player.x;
             let newY = player.y;
+            let direction;
+            let validMove = false;
             switch (event.key) {
-                case 'ArrowUp': newY--; break;
-                case 'ArrowDown': newY++; break;
-                case 'ArrowLeft': newX--; break;
-                case 'ArrowRight': newX++; break;
+                case 'ArrowUp': newY--; direction = "Up"; break;
+                case 'ArrowDown': newY++; direction = "Down"; break;
+                case 'ArrowLeft': newX--; direction = "Left"; break;
+                case 'ArrowRight': newX++; direction = "Right"; break;
             }
             if (newX >= 0 && newX < mazeSize && newY >= 0 && newY < mazeSize && maze[newY][newX] === 1) {
                 player.x = newX;
                 player.y = newY;
+                validMove = true;
                 drawMaze();
                 checkWin();
+            }
+
+            if (save) {
+                logMovement(direction, validMove);
             }
         }
 
         function checkWin() {
             if (player.x === mazeSize - 1 && player.y === mazeSize - 1) {
+
                 clearInterval(timerInterval);
                 mazeCount++;
                 player = { x: 0, y: 0 };
                 timer = 0;
+                document.getElementById('mobileControls').style.display = 'none';
+                document.getElementById('resetbtn').style.display = 'none';
+
+                if (save) {logMovement('win',true);}
+
                 if (mazeCount < totalMazes) {
                     canvas.style.display = 'none';
-                    controls.style.display = 'none';
-                    cooldown.style.display = 'block';
+                    cooldown.style.display = 'flex';
+                    document.getElementById('playmore').style.display = 'none';
+                    document.getElementById('coolbtn').style.display = 'block';
                     cooltext.innerText = `You completed maze ${mazeCount}/${totalMazes}!`;
                 } else {
+                    if (save) {sendDataToGoogleSheets();}
                     canvas.style.display = 'none';
-                    controls.style.display = 'none';
-                    cooldown.style.display = 'block';
+                    cooldown.style.display = 'flex';
+                    document.getElementById('playmore').style.display = 'block';
                     cooltext.innerText = `You completed all mazes ${mazeCount}/${totalMazes}!`;
-                    document.getElementById('coolbtn').innerText = "Restart (progress will be lost!)";
+                    document.getElementById('coolbtn').style.display = "none";
                 }
             }
+        }
+
+        function sendDataToGoogleSheets() {
+            document.getElementById('timer').innerText += `\nSending Data...`;
+            function datasentAlarm() {
+                document.getElementById('timer').innerText = 'Data Sent!';
+                console.log("Data sent");
+                cooltext.innerHTML += "<h2>Thank you for your contribuition!</h2>"
+            }
+
+            const data = {
+                participantID: participantID, // Unique identifier for each user
+                questionnaire: playerData.questionnaire,
+                mazes: playerData.mazeRuns};
+
+            fetch("https://script.google.com/macros/s/AKfycbwIxrS8YgjMhbBAmAhF_em150Gk2M40D6Pi3p03TvGRQWCNG0AAotCYgfpjTLP6Rrxu/exec", {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            }).then(response => datasentAlarm());
         }
     </script>
 </body>
