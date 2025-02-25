@@ -83,7 +83,7 @@ class LTCCell(nn.Module):
     def forward(self, x, h):
         # Compute tau with a softplus to guarantee it’s positive.
         tau = F.softplus(self.log_tau) + 1e-3  # avoid division by zero
-        dt = 1.0  # time step; adjust if you have variable dt from timestamps
+        dt = 0.01 # time step; adjust if you have variable dt from timestamps
         pre_activation = self.input2hidden(x) + self.hidden2hidden(h)
         # LTC update: an Euler integration step of the underlying ODE
         h_new = (1 - dt / tau) * h + (dt / tau) * self.activation(pre_activation)
