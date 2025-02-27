@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maze Puzzle Game</title>
+    <title class="text-center">Maze Puzzle Game</title>
+    <!-- Bootstrap 3.3.7 CSS for older device compatibility -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
     <style>
         body {
             display: flex;
@@ -21,21 +24,28 @@
 
         #gamePage {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            font-family: Arial, sans-serif;
+            font-family: 'IranSans', 'Times New Roman', Arial, sans-serif;
             background-color: rgb(90, 90, 90);
         }
 
-        h1 {font-size: min(6vw,8vh);}
-        h2 {font-size: min(4vw,4vh);}
-        h3 {font-size: min(3vw,3vh);}
+        h1 {
+            font-size: min(6vw,8vh);
+            font-weight: bold;}
+        h2 {
+            color: rgb(5, 14, 31);
+            font-size: min(4vw,4vh);}
+        h3 {
+            color: rgb(5, 14, 31);
+            font-size: min(3vw,3vh);
+            font-weight: bold;}
 
         #controls {
             display: none;
             align-items: center;
             justify-content: center;
             margin: min(2vh,2vw);
+            padding-top: 2%;
         }
         #controls div {
             display: flex;
@@ -53,8 +63,8 @@
         #cooldown button {
             margin-top: 1vh;
         }
-        #savebtn {
-            display: none;
+        #cooltext {
+            color: rgb(5, 14, 31);
         }
       	#Language {
           	background-color: rgba(255, 255, 255, 0.1);
@@ -68,6 +78,9 @@
             align-items: center;
             margin-top: 10px;
         }
+        #Language .radio-inline {
+            font-size: 1.2em;
+        }
         #startbtn{
             font-size: min(5vw,3vh);
         }
@@ -77,7 +90,7 @@
         }
         #questionsContainer div {
             padding: 1%;
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 255, 255, 0.2);
             font-size: min(4vw,3vh);
         }
         #mobileControls {
@@ -86,12 +99,11 @@
             align-items: center;
             width: 70%;
             height: 40vh;
-            max-width: min(70vw,40vh);
+            max-width: min(90vw,40vh);
             max-height: min(50vw,40vh);
         }   
         #mobileControls > div {
             display: flex;
-            gap: 10px;
             justify-content: center;
             width: 100%;
         }
@@ -106,50 +118,83 @@
             min-width: 25%;
             justify-content: center;
         }
+        
+        @media (max-width: 768px) {
+        #gamePage {
+            flex-direction: column;
+        }
+        }
+
+        @keyframes warning {
+            0% {background-color: red;}
+            50% {background-color: yellow;}
+            100% {background-color: red;}
+        }
+
+        @keyframes Done {
+            from {background-color: red;}
+            to {background-color: green;}
+        }
+
     </style>
 </head>
 <body>
     <h1>Maze Puzzle Game</h1>
+  	<div id="Language" class="panel panel-default">
+
+        <br>
+    	<h3 class="panel-title">Choose Your Questionnaire Language:</h3>
+
+        <div><div style="padding-right: 2%;">
+            <label class="radio-inline">
+                <input type="radio" name="Lang" value="Fa" checked> Persian
+            </label>
+        </div>
+        <div style="padding-left: 2%;">
+      	    <label class="radio-inline">
+                <input type="radio" name="Lang" value="En"> English
+            </label>
+        </div></div>
+
+        <div><button class="btn btn-primary btn-lg" onclick="createQuestionnaire()" id="startbtn">
+            Start
+        </button></div>
+        
+        <hr>
   
-  	<div id="Language">
-          
-    		<h3>Choose Your Questionnaire Language:</h3>
-        <div><input type="radio" name="Lang" checked="true" Value="Fa">Persian</input>
-      	<input type="radio" name="Lang" Value="En">English</input></div><br>
-        <div><button onclick="createQuestionnaire()" id="startbtn">Start</button></div><br>
-  
-  		<h3>if you just want to play the maze use this button</h3>
-        <div><button onclick="startMazeSequenceNoSave()">play for fun!</button></div>
+  		<div><h3>but if you want to just play the maze use this button:</h3></div>
+        <div><button class="btn btn-info" onclick="startMazeSequenceNoSave()">
+            play for fun!
+        </button></div>
         
   
     </div>
-    <br>
     
     <div id="questionnaire">
       
-        <h2 id="questionnaireText">Before you start, answer these questions:</h2>
-        
-        <div id="questionsContainer" style="display:none;"></div><br><br>
-        <button margin-top=20dvh onclick="collectQuestionnaireData()">Submit & Start</button>
+        <h2 id="questionnaireText"></h2>
+        <div id="questionsContainer" style="display:none;"></div><br>
+        <h2> Press this button to save the results and continue on to the mazes! </h2> <br>
+        <button margin-top=20dvh class="btn btn-primary" onclick="collectQuestionnaireData()">Submit & Start</button>
     </div>
 
     <script>
         const FaQuestions = [ 
-            "فکرهای شبیه به هم مدام، دوباره و دوباره به ذهنم می آیند",
-            "این فکرها به ذهنم هجوم می آورند",
-            "انگار این فکر ها در ذهنم جا خوش کرده اند و من نمی توانم آنها را متوقف کنم",
-            "من به خیلی از مشکالت فکر میکنم، بدون اینکه هیچ یک از آنها را حل کنم",
-            "در حالی که دارم به مشکالتم فکر میکنم، نمی توانم هیچ کار دیگری انجام دهم",
-            "افکارم خود به خود تکرار می شوند",
-            "افکار بدون اینکه خودم بخواهم، به ذهنم می آیند",
-            "ذهن من روی موضوع های مشخصی می ماند بطوری که نمی توانم از آن خلاص شوم",
-            "دائماً سؤالاتی از خودم میپرسم بدون اینکه برای آنها جوابی بیابم",
-            "افکارم مانع تمرکزم روزی مسائل دیگری می شوند",
-            "فکرم مدام مشغول یک موضوع تکراری است",
-            "افکار، ناگهانی به ذهنم خطور می کنند",
-            "احساس می کنم که انگار مجبورم در مورد یک مسئله تکراری فکر کنم",
-            "این دسته از افکارم کمک چندانی به من نمی کنند",
-            "افکارم تمام توجه ام را به خود مشغول کرده اند"
+            "فکرهای شبیه به هم مدام، دوباره و دوباره به ذهنم می آیند.",
+            "این فکرها به ذهنم هجوم می آورند.",
+            "انگار این فکر ها در ذهنم جا خوش کرده اند و من نمی توانم آنها را متوقف کنم.",
+            "من به خیلی از مشکلات فکر میکنم، بدون اینکه هیچ یک از آنها را حل کنم.",
+            "در حالی که دارم به مشکلاتم فکر میکنم، نمی توانم هیچ کار دیگری انجام دهم.",
+            "افکارم خود به خود تکرار می شوند.",
+            "افکار بدون اینکه خودم بخواهم، به ذهنم می آیند.",
+            "ذهن من روی موضوع های مشخصی می ماند بطوری که نمی توانم از آن خلاص شوم.",
+            "دائماً سؤالاتی از خودم میپرسم بدون اینکه برای آنها جوابی بیابم.",
+            "افکارم مانع تمرکزم روزی مسائل دیگری می شوند.",
+            "فکرم مدام مشغول یک موضوع تکراری است.",
+            "افکار، ناگهانی به ذهنم خطور می کنند.",
+            "احساس می کنم که انگار مجبورم در مورد یک مسئله تکراری فکر کنم.",
+            "این دسته از افکارم کمک چندانی به من نمی کنند.",
+            "افکارم تمام توجه ام را به خود مشغول کرده اند."
         ];
 
         const EnQuestions = [
@@ -177,12 +222,19 @@
             if (document.querySelector(`input[name="Lang"]:checked`).value == "Fa") {
                 Questions = FaQuestions;
                 document.getElementById('questionnaireText').innerHTML =
+                    "لطفا به سوالات زیر با توجه به شماره گذاری پاسخ دهید. <hr>"
+                document.getElementById('questionnaireText').innerHTML +=
                     "هرگز-0    به ندرت-1    گاهی-2    بیشتر-3     همیشه-4";
+                    document.getElementById('questionnaireText').dir = 'rtl'
+                    d = "dir='rtl'"
                 ;
             } else {
                 Questions = EnQuestions;
                 document.getElementById('questionnaireText').innerHTML =
+                    "Please answer the following questions based on the given indexing.<hr>"
+                document.getElementById('questionnaireText').innerHTML +=
                     "0-never 1-hardly ever 2-often 3-usually 4-always";
+                    d = ""
                 ;
             }
             
@@ -199,11 +251,12 @@
             Questions.forEach((question, index) => {
                 const questionDiv = document.createElement('div');
                 questionDiv.innerHTML =
-                    "<div><h3>" + question + "</h3></div><div>" +
+                    `<div ${d}><h3>` + `${index+1}- ` + question + "</h3></div><div style='display:flex;justify-content: center;'>" +
                     [0, 1, 2, 3, 4].map(option =>
-                        "<label>" +
-                        "<input type='radio' name='question" + index + "' value='" + option + "'> " + option +
-                        "</label>"
+                        "<div style='background-color:rgba(255, 255, 255, 0);padding-left:5%;padding-right:5%;'>" +
+                        "<input type='radio' name='question" + index + "' value='" + option + "'><br>" +
+                        "<label>" + option + "</label>" +
+                        "<br></div>"
                     ).join('') + "</div>";
 
                 container.appendChild(questionDiv);
@@ -215,30 +268,29 @@
 
     <div id="gamePage">
 
-    <canvas id="mazeCanvas" width="400" height="400"></canvas>
+    <div><canvas id="mazeCanvas" width="400" height="400"></canvas>
     <div id="controls">
-        <div><button id="resetbtn" onclick="resetGame()">Reset this Maze</button></div>
-        <div><p id="timer">Time: 0s</p></div>
+        <div><button id="resetbtn" class="btn btn-warning" onclick="resetGame()">Reset this Maze</button></div>
+        <div id="timerdiv"><p id="timer" style="margin-top:5px;color: rgb(5, 14, 31);">Time: 0s</p></div>
+    </div></div>
+    
+    <div id="cooldown" class="card-body">
+        <h2 class="panel-title" id="cooltext">Get ready for your next maze!</h2>
+        <button id="coolbtn" class="btn btn-info" onclick="startMazeSequence()">Start next Maze</button>
+        <button id="playmore" class="btn btn-info" display="none" onclick="startMazeSequenceNoSave()">continue playing just for fun</button>
     </div>
     
-    </div>
-
-    
-    <div id="mobileControls">
-        <div>
-            <button onclick="movePlayer({ key: 'ArrowUp' })">↑</button>
+    <div id="mobileControls" class="btn-group-vertical">
+        <div class="btn-group" role="group">
+            <button class="btn btn-primary" onclick="movePlayer({ key: 'ArrowUp' })">↑</button>
         </div>
-        <div>
-            <button onclick="movePlayer({ key: 'ArrowLeft' })">←</button>
-            <button onclick="movePlayer({ key: 'ArrowDown' })">↓</button>
-            <button onclick="movePlayer({ key: 'ArrowRight' })">→</button>
+        <div class="btn-group" role="group">
+            <button class="btn btn-primary" onclick="movePlayer({ key: 'ArrowLeft' })">←</button>
+            <button class="btn btn-primary" onclick="movePlayer({ key: 'ArrowDown' })">↓</button>
+            <button class="btn btn-primary" onclick="movePlayer({ key: 'ArrowRight' })">→</button>
         </div>
     </div>
 
-    <div id="cooldown">
-        <h2 id="cooltext">Get ready for your next maze!</h2>
-        <button id="coolbtn" onclick="startMazeSequence()">Start next Maze</button>
-        <button id="playmore" display="none" onclick="startMazeSequenceNoSave()">continue playing just for fun</button>
     </div>
 
     <script>
@@ -254,6 +306,7 @@
         const cellSize = canvas.width / mazeSize;
         let save = true; // option to not send the data to the server
         const participantID = Date.now();
+        let meanTime = 0;
 
         let playerData = {
             questionnaire: {},
@@ -290,6 +343,7 @@
 
         function startMazeSequence() {
             document.getElementById('coolbtn').innerText = "Start next Maze";
+            document.getElementById('timerdiv').style = ""
             questionnaire.style.display = 'none';
             cooldown.style.display = 'none'
             canvas.style.display = 'block';
@@ -299,6 +353,7 @@
 
         function startMazeSequenceNoSave() {
             document.getElementById('Language').style.display = 'none';
+            meanTime = 0;
             mazeCount = 0;
             totalMazes = 20;
             save = false;
@@ -307,7 +362,8 @@
 
         function startMazeSequenceSave() {
             mazeCount = 0;
-            totalMazes = 10;
+            meanTime = 0;
+            totalMazes = 2;
             save = true;
             startMazeSequence()
         }
@@ -457,10 +513,13 @@
 
                 clearInterval(timerInterval);
                 mazeCount++;
+                meanTime = (meanTime * (mazeCount-1) + timer) / mazeCount;
                 player = { x: 0, y: 0 };
                 timer = 0;
                 document.getElementById('mobileControls').style.display = 'none';
                 document.getElementById('resetbtn').style.display = 'none';
+                cooltext.innerHTML = `You completed maze ${mazeCount}/${totalMazes}!` + " <br> " +
+                     `Average maze solving time: ${meanTime.toFixed(2)}s`;
 
                 if (save) {logMovement('win',true);}
 
@@ -469,13 +528,11 @@
                     cooldown.style.display = 'flex';
                     document.getElementById('playmore').style.display = 'none';
                     document.getElementById('coolbtn').style.display = 'block';
-                    cooltext.innerText = `You completed maze ${mazeCount}/${totalMazes}!`;
                 } else {
                     if (save) {sendDataToGoogleSheets();}
                     canvas.style.display = 'none';
                     cooldown.style.display = 'flex';
                     document.getElementById('playmore').style.display = 'block';
-                    cooltext.innerText = `You completed all mazes ${mazeCount}/${totalMazes}!`;
                     document.getElementById('coolbtn').style.display = "none";
                 }
             }
@@ -483,9 +540,17 @@
 
         function sendDataToGoogleSheets() {
             document.getElementById('timer').innerText += `\nSending Data...`;
+            document.getElementById('timerdiv').style = 
+                "animation-name:warning; animation-iteration-count: infinite; animation-duration: 1s;" +
+                "width: 50vw; border-radius: 5px; padding: 2%;";
+            
+
             function datasentAlarm() {
                 document.getElementById('timer').innerText = 'Data Sent!';
                 console.log("Data sent");
+                document.getElementById('timerdiv').style = 
+                    "animation-name:Done; animation-iteration-count: 1;animation-duration: 1s; background-color: green;" +
+                    "width: 50vw; border-radius: 5px; padding: 2%;";
                 cooltext.innerHTML += "<h2>Thank you for your contribuition!</h2>"
             }
 
@@ -502,5 +567,6 @@
             }).then(response => datasentAlarm());
         }
     </script>
+<br>
 </body>
 </html>

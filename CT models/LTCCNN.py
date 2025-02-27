@@ -104,7 +104,7 @@ def process_movement_log(movement_log, time_step=0.03):
 # We now add an option to process maze config from a single channel image.
 
 class MazeCNN(nn.Module):
-    def __init__(self, output_features, input_channels=1, img_size=64):
+    def __init__(self, output_features, input_channels=3, img_size=64):
         """
         Processes a maze configuration image.
         Args:
@@ -164,7 +164,7 @@ class LTCCell(nn.Module):
 
     def forward(self, x, h):
         tau = F.softplus(self.log_tau) + 1e-3  # ensure tau > 0
-        dt = 1.0  # can be scaled with the actual dt if desired
+        dt = 0.01  # can be scaled with the actual dt if desired
         pre_activation = self.input2hidden(x) + self.hidden2hidden(h)
         h_new = (1 - dt / tau) * h + (dt / tau) * self.activation(pre_activation)
         return h_new
