@@ -240,7 +240,7 @@ class MazeSolverNet(nn.Module):
 
 if __name__ == '__main__':
     # Example maze configuration as provided.
-    maze_config = [
+    '''maze_config = [
         [1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1,0,1],
         [0,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,1,0,1,0,1],
         [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1],
@@ -268,7 +268,14 @@ if __name__ == '__main__':
         [1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,0,1],
         [1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,1,0,0,0,0,0,1],
         [1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1]
-    ]
+    ]'''
+
+    data = open('processed_data.pk','ab')
+    import pickle
+    data = pickle.load(data)
+
+    for inputs_seq, labels_seq, const_arr in data:
+        
     
     # Process the maze into a tensor.
     maze_tensor = process_maze_config(maze_config)  # shape: (1, H, W)
@@ -278,6 +285,8 @@ if __name__ == '__main__':
     # Suppose we also have 15 constant numerical inputs.
     dummy_constants = torch.randn(1, 15)
     
+
+
     # Create an instance of MazeSolverNet.
     net = MazeSolverNet(maze_img_size=64, constant_dim=15, cnn_out_dim=16,
                         constant_out_dim=3, ltc_hidden_size=32, ltc_output_dim=3)
