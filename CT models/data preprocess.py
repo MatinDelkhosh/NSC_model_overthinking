@@ -44,137 +44,122 @@ def update_agent_position(current, direction):
     else:
         return current
 
+# --- Preprocessing Function ---
 def preprocess_movement_data(maze_config, movement_log, constants,
-                             time_resolution=0.01, command_duration=0.05,
+                             command_duration=0.05,
                              maze_size=(27, 27)):
     """
     Preprocess a single data instance.
-    
+
+    For each movement event (ignoring "start" and "win"), three samples are generated:
+      1. Pre-command: label = [0,0,0], agent position unchanged.
+      2. At command: label = command vector (e.g., [1,0,0] for "Up"), agent position unchanged.
+      3. Post-command: label = [0,0,0] and if the move is valid, update the agent position.
+
+    The maze configuration (channel 0) is constant; channel 1 is a one-hot agent location.
+    The same two-channel image is used for all three samples except that after the move (sample 3)
+    the agent's location is updated (if the move was valid).
+
     Args:
-        maze_config: 2D list or array of size maze_size (e.g. 27x27) representing the maze layout.
-                     (For example, 1 for wall and 0 for free path.)
-        movement_log: List of dictionaries, each with keys:
-                      "direction" (str), "valid" (bool), "time" (ISO datetime string).
-                      E.g., {"direction": "Right", "valid": True, "time": "2025-02-25T09:39:25.576Z"}
-        constants: 15-element list or array (constant inputs for this sample).
-        time_resolution: Sampling interval in seconds (default 0.01s).
-        command_duration: Duration in seconds for which a command label should be active (default 0.03s).
-        maze_size: Tuple with maze dimensions (default (27,27)).
-        
+        maze_config: 2D list/array (maze_size) representing the maze layout (e.g., 1 for wall, 0 for free).
+        movement_log: List of dictionaries with keys "direction" (str), "valid" (bool), and "time" (ISO datetime string).
+        constants: 15-element list/array (constant inputs for this sample).
+        command_duration: Duration in seconds for a command event (default 0.05).
+        maze_size: Tuple with maze dimensions (default (27, 27)).
+
     Returns:
-        input_sequence: np.array of shape (T, 2, maze_size[0], maze_size[1])
-                        where channel 0 is the maze layout (repeated) and channel 1 is the one-hot agent location.
+        input_sequence: np.array of shape (T, 2, maze_size[0], maze_size[1]),
+                        where channel 0 is the maze layout and channel 1 is the one-hot agent location.
         labels: np.array of shape (T, 3) with command labels.
         constants: np.array of shape (15,) (unchanged).
     """
-    # Convert maze layout to numpy array (assume it's already maze_size, e.g., 27x27)
+    # Convert maze layout to numpy array (assume it's maze_size)
     maze_array = np.array(maze_config, dtype=np.float32)
-    
-    # Determine duration from movement log based on timestamps.
-    # Parse all timestamps (ignoring "start" and "win" for command generation but using them for timeline).
+
+    # Parse movement events (include all events for timeline but only generate command for moves)
     events = []
     for entry in movement_log:
-        # We include all entries in timeline but only assign a command vector for certain directions.
-        # (For "start" and "win", command will be [0,0,0].)
-        ts_str = entry["time"].replace("Z", "")  # remove trailing Z if present
+        # Skip "start" and "win" events in command generation (they will yield zero labels)
+        d_lower = entry["direction"].lower()
+        if d_lower in ["start", "win"]:
+            continue
+        ts_str = entry["time"].replace("Z", "")  # remove trailing Z
         try:
             ts = datetime.fromisoformat(ts_str)
         except Exception as e:
             raise ValueError(f"Error parsing timestamp {ts_str}: {e}")
-        print(f'\r{entry}',end='')
-        try: events.append({
+        events.append({
             "time": ts,
             "direction": entry["direction"],
             "valid": entry["valid"]
         })
-        except: print('\nsth wrong')
-    
+
     if len(events) == 0:
-        raise ValueError("Movement log is empty.")
-    
-    # Use the time of the first event as base time.
-    base_time = events[0]["time"]
-    
-    # Determine sample indices for events.
-    duration_samples = int(round(command_duration / time_resolution))  # e.g., 3 samples
-    event_samples = []
-    for ev in events:
-        # Compute time difference in seconds.
-        t_diff = (ev["time"] - base_time).total_seconds()
-        sample_index = int(round(t_diff / time_resolution))
-        ev["sample_index"] = sample_index
-        event_samples.append(sample_index)
-    
-    # Determine total number of time samples: from 0 to max event index + command_duration duration.
-    T = max(event_samples) + duration_samples
-    # Initialize label sequence with zeros.
+        raise ValueError("No movement events to process.")
+
+    # For this triangle shape, each event produces 3 samples.
+    # We ignore the actual timestamp spacing here and simply output 3 samples per event.
+    num_events = len(events)
+    T = num_events * 3
+
+    # Initialize labels: for each event, sample 1 and sample 3 will be zeros, sample 2 is the command.
     labels = np.zeros((T, 3), dtype=np.float32)
-    
-    # Prepare a dictionary mapping sample index to a list of events that occur at that sample.
-    events_dict = {}
-    for ev in events:
-        idx = ev["sample_index"]
-        if idx not in events_dict:
-            events_dict[idx] = []
-        events_dict[idx].append(ev)
-    
     # Initialize agent position timeline.
-    # Agent starts at top-left corner: (0, 0).
+    # Agent starts at (0, 0)
     agent_positions = np.zeros((T, 2), dtype=np.int32)
     current_agent = (0, 0)
-    
-    # For each time step, if an event occurs at that sample, assign command labels (for command_duration)
-    # and update the agent position if the event is valid.
-    for t in range(T):
-        if t in events_dict:
-            # Process events in order.
-            for ev in events_dict[t]:
-                # Determine command vector (for valid movement commands).
-                # For "start" and "win", we leave the label as zeros.
-                d_lower = ev["direction"].lower()
-                if d_lower in ["up", "down", "left", "right", "reset"]:
-                    cmd = get_command_vector(ev["direction"])
-                else:
-                    cmd = np.array([0, 0, 0], dtype=np.float32)
-                # Set label for the duration of the command (overlapping commands override earlier ones).
-                for dt in range(duration_samples):
-                    if t + dt < T:
-                        labels[t + dt] = cmd
-                # Update agent position only if the event is valid.
-                if ev["valid"] and d_lower in ["up", "down", "left", "right", "reset"]:
-                    new_agent = update_agent_position(current_agent, ev["direction"])
-                    # Optionally, you can add boundary checking here to ensure the new position is within maze bounds.
-                    # For example:
-                    r, c = new_agent
-                    if 0 <= r < maze_size[0] and 0 <= c < maze_size[1]:
-                        current_agent = new_agent
-                    # If out-of-bounds, you might choose to ignore the update.
-        # For each time step, record the current agent position.
-        agent_positions[t] = current_agent
-    
-    # Now, build the input sequence.
-    # For each time step, create a 2-channel image of shape (2, maze_size[0], maze_size[1]):
-    # - Channel 0: constant maze layout.
-    # - Channel 1: one-hot encoding of the agent position.
+
+    # We'll also build the input_sequence as we go.
     input_sequence = []
-    # Pre-cast maze channel once.
+    # Pre-cast the constant maze layout (channel 0)
     maze_channel = maze_array.copy()  # shape: (27,27)
-    
-    for t in range(T):
-        # Create agent channel as zeros.
-        agent_channel = np.zeros(maze_size, dtype=np.float32)
-        r, c = agent_positions[t]
-        # Make sure the agent's position is within bounds.
-        if 0 <= r < maze_size[0] and 0 <= c < maze_size[1]:
-            agent_channel[r, c] = 1.0
-        # Stack to create a 2-channel image.
-        # We use channels-first convention: shape (2, H, W)
-        img = np.stack([maze_channel, agent_channel], axis=0)
-        input_sequence.append(img)
-    
-    input_sequence = np.array(input_sequence, dtype=np.float32)  # shape: (T, 2, maze_size[0], maze_size[1])
+
+    # For each event, create 3 samples.
+    for i, ev in enumerate(events):
+        # Determine command vector for the event.
+        cmd_vector = get_command_vector(ev["direction"])  # e.g., [1,0,0] for Up, etc.
+        base_index = i * 3
+
+        # Sample 1 (pre-command): label is zeros; agent position is current.
+        labels[base_index] = np.array([0, 0, 0], dtype=np.float32)
+        # Sample 2 (at command): label is the command vector; agent position still unchanged.
+        labels[base_index + 1] = cmd_vector
+        # Sample 3 (post-command): label is zeros.
+        labels[base_index + 2] = np.array([0, 0, 0], dtype=np.float32)
+
+        # For samples 1 and 2, agent position remains the same.
+        for j in range(2):
+            agent_positions[base_index + j] = current_agent
+
+        # For sample 3, update agent position if the movement is valid.
+        d_lower = ev["direction"].lower()
+        if ev["valid"] and d_lower in ["up", "down", "left", "right", "reset"]:
+            new_agent = update_agent_position(current_agent, ev["direction"])
+            r, c = new_agent
+            # Optional: boundary check for maze_size.
+            if 0 <= r < maze_size[0] and 0 <= c < maze_size[1]:
+                current_agent = new_agent
+        agent_positions[base_index + 2] = current_agent
+
+        # Build input images for these three samples.
+        for j in range(3):
+            # Create the agent channel: one-hot of the current agent position.
+            # Note: for samples 1 and 2, use the old position; for sample 3, use updated position.
+            if j < 2:
+                pos = agent_positions[base_index]  # unchanged
+            else:
+                pos = agent_positions[base_index + 2]  # updated position
+            agent_channel = np.zeros(maze_size, dtype=np.float32)
+            r, c = pos
+            if 0 <= r < maze_size[0] and 0 <= c < maze_size[1]:
+                agent_channel[r, c] = 1.0
+            # Stack channels: channel 0 = maze layout, channel 1 = agent location.
+            img = np.stack([maze_channel, agent_channel], axis=0)
+            input_sequence.append(img)
+
+    input_sequence = np.array(input_sequence, dtype=np.float32)  # shape: (T, 2, 27, 27)
     constants = np.array(constants, dtype=np.float32)  # shape: (15,)
-    
+
     return input_sequence, labels, constants
 
 from matplotlib.animation import FuncAnimation
