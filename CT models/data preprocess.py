@@ -1,9 +1,9 @@
 import numpy as np
 from datetime import datetime
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
 import pickle
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 def get_command_vector(direction):
     """
@@ -44,46 +44,48 @@ def update_agent_position(current, direction):
     else:
         return current
 
-# --- Preprocessing Function ---
+# --- Updated Preprocessing Function ---
 def preprocess_movement_data(maze_config, movement_log, constants,
                              command_duration=0.05,
                              maze_size=(27, 27)):
     """
     Preprocess a single data instance.
-
+    
     For each movement event (ignoring "start" and "win"), three samples are generated:
-      1. Pre-command: label = [0,0,0], agent position unchanged.
-      2. At command: label = command vector (e.g., [1,0,0] for "Up"), agent position unchanged.
-      3. Post-command: label = [0,0,0] and if the move is valid, update the agent position.
-
+      1. Pre-command sample: label = [0,0,0] at time = event_time - command_duration/2.
+      2. At-command sample: label = command vector at time = event_time.
+      3. Post-command sample: label = [0,0,0] at time = event_time + command_duration/2,
+         and if the move is valid, the agent’s position is updated.
+    
     The maze configuration (channel 0) is constant; channel 1 is a one-hot agent location.
-    The same two-channel image is used for all three samples except that after the move (sample 3)
-    the agent's location is updated (if the move was valid).
-
+    The same two-channel image is used for all three samples except that on the post-command
+    sample the agent position is updated.
+    
     Args:
         maze_config: 2D list/array (maze_size) representing the maze layout (e.g., 1 for wall, 0 for free).
         movement_log: List of dictionaries with keys "direction" (str), "valid" (bool), and "time" (ISO datetime string).
         constants: 15-element list/array (constant inputs for this sample).
         command_duration: Duration in seconds for a command event (default 0.05).
         maze_size: Tuple with maze dimensions (default (27, 27)).
-
+        
     Returns:
-        input_sequence: np.array of shape (T, 2, maze_size[0], maze_size[1]),
+        input_sequence: np.array of shape (T, 2, maze_size[0], maze_size[1])
                         where channel 0 is the maze layout and channel 1 is the one-hot agent location.
         labels: np.array of shape (T, 3) with command labels.
         constants: np.array of shape (15,) (unchanged).
+        time_stamps: np.array of shape (T,) with the relative time (in seconds) for each sample.
     """
     # Convert maze layout to numpy array (assume it's maze_size)
     maze_array = np.array(maze_config, dtype=np.float32)
 
-    # Parse movement events (include all events for timeline but only generate command for moves)
+    # Parse movement events (skip "start" and "win")
     events = []
     for entry in movement_log:
-        # Skip "start" and "win" events in command generation (they will yield zero labels)
-        d_lower = entry["direction"].lower()
+        try: d_lower = entry["direction"].lower()
+        except: continue
         if d_lower in ["start", "win"]:
             continue
-        ts_str = entry["time"].replace("Z", "")  # remove trailing Z
+        ts_str = entry["time"].replace("Z", "")
         try:
             ts = datetime.fromisoformat(ts_str)
         except Exception as e:
@@ -97,152 +99,147 @@ def preprocess_movement_data(maze_config, movement_log, constants,
     if len(events) == 0:
         raise ValueError("No movement events to process.")
 
-    # For this triangle shape, each event produces 3 samples.
-    # We ignore the actual timestamp spacing here and simply output 3 samples per event.
+    # For each event we produce 3 samples.
     num_events = len(events)
     T = num_events * 3
 
-    # Initialize labels: for each event, sample 1 and sample 3 will be zeros, sample 2 is the command.
     labels = np.zeros((T, 3), dtype=np.float32)
-    # Initialize agent position timeline.
-    # Agent starts at (0, 0)
     agent_positions = np.zeros((T, 2), dtype=np.int32)
+    time_stamps = np.zeros((T,), dtype=np.float32)
     current_agent = (0, 0)
 
-    # We'll also build the input_sequence as we go.
     input_sequence = []
-    # Pre-cast the constant maze layout (channel 0)
-    maze_channel = maze_array.copy()  # shape: (27,27)
+    maze_channel = maze_array.copy()  # constant maze layout
 
-    # For each event, create 3 samples.
+    # We will set times relative to the first event.
+    first_event_time = events[0]["time"].timestamp()
+    
     for i, ev in enumerate(events):
-        # Determine command vector for the event.
-        cmd_vector = get_command_vector(ev["direction"])  # e.g., [1,0,0] for Up, etc.
+        # Compute relative event time in seconds.
+        event_time = ev["time"].timestamp() - first_event_time
+        
+        # For the triangle, we define:
+        # Sample 1 time: event_time - command_duration/2
+        # Sample 2 time: event_time
+        # Sample 3 time: event_time + command_duration/2
+        sample_times = [event_time - command_duration/2,
+                        event_time,
+                        event_time + command_duration/2]
+        
         base_index = i * 3
 
-        # Sample 1 (pre-command): label is zeros; agent position is current.
+        # Sample 1: pre-command, label zeros, agent unchanged.
         labels[base_index] = np.array([0, 0, 0], dtype=np.float32)
-        # Sample 2 (at command): label is the command vector; agent position still unchanged.
+        time_stamps[base_index] = sample_times[0]
+        agent_positions[base_index] = current_agent
+
+        # Sample 2: at-command, label = command vector, agent still unchanged.
+        cmd_vector = get_command_vector(ev["direction"])
         labels[base_index + 1] = cmd_vector
-        # Sample 3 (post-command): label is zeros.
+        time_stamps[base_index + 1] = sample_times[1]
+        agent_positions[base_index + 1] = current_agent
+
+        # Sample 3: post-command, label zeros, then update agent if valid.
         labels[base_index + 2] = np.array([0, 0, 0], dtype=np.float32)
-
-        # For samples 1 and 2, agent position remains the same.
-        for j in range(2):
-            agent_positions[base_index + j] = current_agent
-
-        # For sample 3, update agent position if the movement is valid.
+        time_stamps[base_index + 2] = sample_times[2]
         d_lower = ev["direction"].lower()
         if ev["valid"] and d_lower in ["up", "down", "left", "right", "reset"]:
             new_agent = update_agent_position(current_agent, ev["direction"])
             r, c = new_agent
-            # Optional: boundary check for maze_size.
             if 0 <= r < maze_size[0] and 0 <= c < maze_size[1]:
                 current_agent = new_agent
         agent_positions[base_index + 2] = current_agent
 
         # Build input images for these three samples.
         for j in range(3):
-            # Create the agent channel: one-hot of the current agent position.
-            # Note: for samples 1 and 2, use the old position; for sample 3, use updated position.
-            if j < 2:
-                pos = agent_positions[base_index]  # unchanged
-            else:
-                pos = agent_positions[base_index + 2]  # updated position
+            # For samples 1 and 2, use the old agent position; for sample 3, use updated position.
+            pos = agent_positions[base_index] if j < 2 else agent_positions[base_index + 2]
             agent_channel = np.zeros(maze_size, dtype=np.float32)
             r, c = pos
             if 0 <= r < maze_size[0] and 0 <= c < maze_size[1]:
                 agent_channel[r, c] = 1.0
-            # Stack channels: channel 0 = maze layout, channel 1 = agent location.
             img = np.stack([maze_channel, agent_channel], axis=0)
             input_sequence.append(img)
 
-    input_sequence = np.array(input_sequence, dtype=np.float32)  # shape: (T, 2, 27, 27)
-    constants = np.array(constants, dtype=np.float32)  # shape: (15,)
-
-    return input_sequence, labels, constants
-
-from matplotlib.animation import FuncAnimation
-
-def visualize_processed_data(input_sequence, labels, time_resolution=0.01):
-    """
-    Visualize the processed data with animation showing agent movement and neuron activations over time.
-    """
-    T = input_sequence.shape[0]
-
-    # Extract maze layout and agent positions with NaN handling
-    maze_layout = input_sequence[0, 0, :, :]
-    agent_positions = []
-    for t in range(T):
-        pos = np.argwhere(input_sequence[t, 1, :, :] == 1)
-        if pos.size > 0:
-            agent_positions.append(pos[0].astype(float))
-        else:
-            agent_positions.append([np.nan, np.nan])  # Ensure consistent format
-    agent_positions = np.array(agent_positions)
-
-    # Create time axis
-    time_axis = np.arange(T) * time_resolution
-
-    # Set up figure and axes
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+    input_sequence = np.array(input_sequence, dtype=np.float32)  # (T, 2, H, W)
+    constants = np.array(constants, dtype=np.float32)  # (15,)
     
-    # Maze subplot setup
+    return input_sequence, labels, constants, time_stamps
+
+# --- Updated Visualization Function ---
+def visualize_processed_data(input_sequence, labels, time_stamps):
+    """
+    Visualizes the processed data using animation.
+    
+    Args:
+        input_sequence: np.array of shape (T, 2, maze_size[0], maze_size[1])
+                        - Channel 0: constant maze layout.
+                        - Channel 1: agent location (one-hot encoded).
+        labels: np.array of shape (T, 3), representing neuron activations.
+        time_stamps: np.array of shape (T,), containing the actual timestamps of each frame.
+    """
+    T = len(time_stamps)
+    maze_size = input_sequence.shape[2:]  # (H, W)
+
+    # Create a figure with two subplots.
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+
+    # Subplot 1: Maze and agent position.
+    maze_layout = (input_sequence[0, 0]-1) * -1  # Maze layout (constant)
     ax1.imshow(maze_layout, cmap='gray_r')
-    path_line, = ax1.plot([], [], 'ro-', markersize=4, label="Agent Path")
-    current_pos, = ax1.plot([], [], 'bo', markersize=8, label="Current Position")  # Initialize with empty lists
-    ax1.set_title("Maze Layout and Agent Path")
+    agent_marker, = ax1.plot([], [], 'ro', markersize=6)
+    ax1.set_title("Maze and Agent Position")
     ax1.set_xlabel("Column")
     ax1.set_ylabel("Row")
-    ax1.legend()
-    ax1.invert_yaxis()
+    ax1.invert_yaxis()  # Ensure (0,0) is at the top-left
 
-    # Neuron activations subplot setup
-    line_up, = ax2.plot([], [], 'blue', label="Up/Down")
-    line_left, = ax2.plot([], [], 'green', label="Left/Right")
-    line_reset, = ax2.plot([], [], 'red', label="Reset")
-    ax2.set_title("Output Neurons Over Time")
+    # Subplot 2: Neuron outputs vs. time.
+    ax2.set_title("Output Neuron Activations Over Time")
     ax2.set_xlabel("Time (s)")
     ax2.set_ylabel("Neuron Output")
-    ax2.set_xlim(0, T*time_resolution)
-    ax2.set_ylim(-1.1, 1.1)
+    line0, = ax2.plot([], [], 'b-', label="Up/Down")
+    line1, = ax2.plot([], [], 'g-', label="Left/Right")
+    line2, = ax2.plot([], [], 'r-', label="Reset")
     ax2.legend()
+    ax2.set_xlim(time_stamps[0], time_stamps[-1])
+    ax2.set_ylim(np.min(labels) - 0.5, np.max(labels) + 0.5)
 
+    # Initialization function: clear data.
     def init():
-        """Initialize animation elements"""
-        path_line.set_data([], [])
-        current_pos.set_data([], [])  # Initialize with empty lists
-        line_up.set_data([], [])
-        line_left.set_data([], [])
-        line_reset.set_data([], [])
-        return (path_line, current_pos, line_up, line_left, line_reset)
+        agent_marker.set_data([], [])
+        line0.set_data([], [])
+        line1.set_data([], [])
+        line2.set_data([], [])
+        return agent_marker, line0, line1, line2
 
+    # Update function for animation.
     def update(frame):
-        """Update function for each animation frame"""
-        # Get current position coordinates
-        x = agent_positions[frame, 1]
-        y = agent_positions[frame, 0]
+        # Update agent marker (find position where channel 1 is 1).
+        agent_pos = np.argwhere(input_sequence[frame, 1] == 1)
+        if agent_pos.size > 0:
+            # Wrap the scalar positions in a list.
+            agent_marker.set_data([agent_pos[0][1]], [agent_pos[0][0]])  # (col, row)
+        else:
+            agent_marker.set_data([], [])
+            
+        # Update neuron output plot (plot all data up to the current frame).
+        t_current = time_stamps[:frame+1]
+        line0.set_data(t_current, labels[:frame+1, 0])
+        line1.set_data(t_current, labels[:frame+1, 1])
+        line2.set_data(t_current, labels[:frame+1, 2])
         
-        # Update current position (wrap scalars in lists)
-        current_pos.set_data([x], [y])  # FIX: Pass coordinates as lists
-        
-        # Update path (use slicing to get sequences)
-        path_line.set_data(agent_positions[:frame+1, 1], agent_positions[:frame+1, 0])
-        
-        # Update neuron plots
-        line_up.set_data(time_axis[:frame+1], labels[:frame+1, 0])
-        line_left.set_data(time_axis[:frame+1], labels[:frame+1, 1])
-        line_reset.set_data(time_axis[:frame+1], labels[:frame+1, 2])
+        return agent_marker, line0, line1, line2
 
-        return (path_line, current_pos, line_up, line_left, line_reset)
-
-    # Create animation
-    ani = FuncAnimation(fig, update, frames=T, init_func=init,
-                        blit=True, interval=time_resolution*1000, repeat=False)
+    # Create the animation using the actual time differences.
+    ani = animation.FuncAnimation(
+        fig, update, frames=range(T),
+        init_func=init, blit=True, interval=200, repeat=False
+    )
 
     plt.tight_layout()
     plt.show()
-      
+
+
 # --- Example usage ---
 if __name__ == '__main__':
     #df = pd.read_excel('D:\Matin\stuff\NSC\data\test export\Single Sheet data.xlsx')
@@ -346,7 +343,7 @@ if __name__ == '__main__':
     
     # Example 15 constant inputs (dummy data).
     constants = np.random.randn(15).tolist()
-    data = open('CT models/saveddata.pk','rb')
+    data = open('Data/saveddata.pk','rb')
     data_load = pickle.load(data)
     data.close()
 
@@ -356,10 +353,10 @@ if __name__ == '__main__':
         processed_data.append([])
         for constants,maze_config,movement_log in d:
             # Preprocess the data.
-            inputs_seq, labels_seq, const_arr = preprocess_movement_data(maze_config, movement_log, constants)
-            processed_data[-1].append((inputs_seq,labels_seq,const_arr))
+            inputs_seq, labels_seq, const_arr, time_stamps = preprocess_movement_data(maze_config, movement_log, constants)
+            processed_data[-1].append((inputs_seq,labels_seq,const_arr,time_stamps))
 
-    with open('processed_data.pk','ab') as data_dump:
+    with open('Data/processed_data.pk','wb') as data_dump:
         pickle.dump(processed_data, data_dump)
     
     #print("Input sequence shape:", inputs_seq.shape)  # (T, 2, 27, 27)
@@ -367,4 +364,4 @@ if __name__ == '__main__':
     #print("Constants shape:", const_arr.shape)         # (15,)
 
     # Visualize the processed data
-    visualize_processed_data(inputs_seq, labels_seq)
+    visualize_processed_data(inputs_seq, labels_seq, time_stamps)
