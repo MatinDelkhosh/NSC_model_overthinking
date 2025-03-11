@@ -5,106 +5,11 @@ import numpy as np
 from datetime import datetime
 
 ####################################
-# 1. Maze Configuration Preprocessing
+#  The Neural Network Architecture
 ####################################
-
-def process_maze_config(maze_config):
-    """
-    Convert a maze configuration (a list-of-lists) into a torch tensor.
-    Here we assume:
-      - maze_config is a 2D list/array with values 0 and 1.
-      - We add a channel dimension.
-    """
-    maze_np = np.array(maze_config, dtype=np.float32)  # shape: (H, W)
-    # Normalize if needed. For example, you can keep 0/1 or scale to 0-1.
-    maze_tensor = torch.from_numpy(maze_np).unsqueeze(0)  # shape: (1, H, W)
-    return maze_tensor
-
-####################################
-# 2. Movement Log Preprocessing
-####################################
-
-def process_movement_log(movement_log, time_step=0.03):
-    """
-    Process a movement log to obtain:
-      - a list/array of time indices (or time differences in steps)
-      - a one-hot encoding (or label) for the directions.
-
-    For this example, we define three groups:
-      * up/down  -> index 0
-      * left/right -> index 1
-      * reset (or special commands) -> index 2
-
-    We will map the "direction" string accordingly.
-    Adjust this mapping as needed.
-    """
-    # Define a mapping for directions.
-    direction_map = {
-        "start": None,  # you may choose to ignore the start marker
-        "Up": 0,
-        "Down": 0,
-        "Left": 1,
-        "Right": 1,
-        "win": None,  # may be terminal, ignore in training input
-        "reset": 2  # if you have a reset command
-    }
-    
-    # Convert timestamp strings to datetime objects.
-    # Assume ISO format, e.g., "2025-02-25T09:39:23.771Z" (we remove the trailing Z)
-    def parse_time(ts):
-        return datetime.fromisoformat(ts.replace("Z", ""))
-    
-    # Filter out commands we don't want to use (e.g., "start" or "win")
-    valid_entries = []
-    for entry in movement_log:
-        if entry["direction"] in ["start", "win"]:
-            continue
-        # Only include if valid==True (or you could incorporate invalid moves differently)
-        if not entry["valid"]:
-            continue
-        valid_entries.append(entry)
-    
-    if not valid_entries:
-        raise ValueError("No valid movement commands found.")
-    
-    # Calculate relative time in seconds (from the first valid entry)
-    base_time = parse_time(valid_entries[0]["time"])
-    time_steps = []
-    direction_labels = []
-    for entry in valid_entries:
-        t = parse_time(entry["time"])
-        # difference in seconds divided by time_step gives an approximate step index.
-        step_index = (t - base_time).total_seconds() / time_step
-        time_steps.append(step_index)
-        # Map the direction string to our index.
-        d = entry["direction"]
-        if d not in direction_map or direction_map[d] is None:
-            # For safety, you might choose to skip or assign a default value.
-            continue
-        direction_labels.append(direction_map[d])
-    
-    # For a simple training scenario, you might want to create a tensor of labels.
-    # For example, one-hot encode them into a size 3 vector.
-    labels = []
-    for label in direction_labels:
-        one_hot = [0, 0, 0]
-        one_hot[label] = 1
-        labels.append(one_hot)
-    
-    labels = torch.tensor(labels, dtype=torch.float32)  # shape: (seq_len, 3)
-    time_steps = torch.tensor(time_steps, dtype=torch.float32)  # shape: (seq_len,)
-    
-    return time_steps, labels
-
-####################################
-# 3. The Neural Network Architecture
-####################################
-
-# (Reusing the MazeCNN, ConstantsNet, LTCCell, LTC, and MazeSolverNet definitions from before.)
-# We now add an option to process maze config from a single channel image.
 
 class MazeCNN(nn.Module):
-    def __init__(self, output_features, input_channels=3, img_size=64):
+    def __init__(self, output_features, input_channels=2, img_size=27):
         """
         Processes a maze configuration image.
         Args:
@@ -125,6 +30,7 @@ class MazeCNN(nn.Module):
             nn.MaxPool2d(2)
         )
         conv_output_size = 64 * (img_size // 8) * (img_size // 8)
+        conv_output_size = 64 * 3 * 3
         self.fc = nn.Linear(conv_output_size, output_features)
 
     def forward(self, x):
@@ -152,9 +58,6 @@ class ConstantsNet(nn.Module):
 
 class LTCCell(nn.Module):
     def __init__(self, input_size, hidden_size):
-        """
-        A simple LTC cell updating its hidden state.
-        """
         super(LTCCell, self).__init__()
         self.hidden_size = hidden_size
         self.input2hidden = nn.Linear(input_size, hidden_size)
@@ -162,160 +65,193 @@ class LTCCell(nn.Module):
         self.log_tau = nn.Parameter(torch.zeros(hidden_size))
         self.activation = torch.tanh
 
-    def forward(self, x, h):
+    def forward(self, x, h, dt):
         tau = F.softplus(self.log_tau) + 1e-3  # ensure tau > 0
-        dt = 0.01  # can be scaled with the actual dt if desired
         pre_activation = self.input2hidden(x) + self.hidden2hidden(h)
         h_new = (1 - dt / tau) * h + (dt / tau) * self.activation(pre_activation)
         return h_new
 
 class LTC(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
-        """
-        Processes a sequence input with an LTC cell.
-        """
         super(LTC, self).__init__()
         self.hidden_size = hidden_size
         self.cell = LTCCell(input_size, hidden_size)
         self.output_layer = nn.Linear(hidden_size, output_size)
 
-    def forward(self, x, h0=None):
-        """
-        Args:
-            x: (batch, seq_len, input_size)
-            h0: initial hidden state
-        Returns:
-            outputs: (batch, seq_len, output_size)
-            h: final hidden state
-        """
+    def forward(self, x, time_stamps, h0=None):
         batch_size, seq_len, _ = x.size()
         if h0 is None:
             h = torch.zeros(batch_size, self.hidden_size, device=x.device)
         else:
             h = h0
         outputs = []
+        # For dt calculation, assume time_stamps is a tensor of shape (seq_len,)
         for t in range(seq_len):
-            h = self.cell(x[:, t, :], h)
+            if t == 0:
+                dt = time_stamps[0]  # or assume some initial dt
+            else:
+                dt = time_stamps[t] - time_stamps[t-1]
+            # Ensure dt is a tensor of correct type:
+            dt = dt if isinstance(dt, torch.Tensor) else torch.tensor(dt, device=x.device, dtype=x.dtype)
+            h = self.cell(x[:, t, :], h, dt=dt)
             out = self.output_layer(h)
             outputs.append(out.unsqueeze(1))
         outputs = torch.cat(outputs, dim=1)
         return outputs, h
 
-class MazeSolverNet(nn.Module):
-    def __init__(self,
-                 maze_img_size=64,
-                 constant_dim=15,
-                 cnn_out_dim=16,
-                 constant_out_dim=3,
-                 ltc_hidden_size=32,
-                 ltc_output_dim=3):
+####################################
+#     Putting It All Together
+####################################
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
+
+# Assume MazeCNN, ConstantsNet, LTCCell, and LTC are defined as before.
+# For dynamic input, the MazeCNN is now used on a sequence of images with 2 channels.
+
+class MazeSolverNetDynamic(nn.Module):
+    def __init__(self, maze_img_size=27, constant_dim=15, cnn_out_dim=16,
+                 constant_out_dim=3, ltc_hidden_size=32, ltc_output_dim=3):
         """
-        Combines the MazeCNN, ConstantsNet, and LTC network.
+        Processes a dynamic maze sequence and constant inputs.
+        maze_seq: (batch, seq_len, 2, H, W) where channel 0 is maze layout,
+                  channel 1 is the one-hot agent location.
+        constants: (batch, constant_dim)
         """
-        super(MazeSolverNet, self).__init__()
-        self.maze_cnn = MazeCNN(output_features=cnn_out_dim, input_channels=1, img_size=maze_img_size)
+        super(MazeSolverNetDynamic, self).__init__()
+        # Use 2 input channels since the agent location is dynamic.
+        self.maze_cnn = MazeCNN(output_features=cnn_out_dim, input_channels=2, img_size=maze_img_size)
         self.const_net = ConstantsNet(input_dim=constant_dim, output_dim=constant_out_dim)
         self.ltc_input_dim = cnn_out_dim + constant_out_dim
         self.ltc = LTC(input_size=self.ltc_input_dim, hidden_size=ltc_hidden_size, output_size=ltc_output_dim)
 
-    def forward(self, maze_img, constants, seq_len=10):
+    def forward(self, maze_seq, constants, time_stamps):
         """
         Args:
-            maze_img: (batch, channels, height, width)
-            constants: (batch, constant_dim)
-            seq_len: number of time steps for the LTC network.
+            maze_seq: Tensor of shape (batch, seq_len, 2, H, W)
+            constants: Tensor of shape (batch, constant_dim)
+            time_stamps: Tensor of shape (batch, seq_len) or (seq_len,) if same across batch.
         Returns:
-            outputs: (batch, seq_len, 3)
+            outputs: Tensor of shape (batch, seq_len, 3)
         """
-        cnn_features = self.maze_cnn(maze_img)       # (batch, cnn_out_dim)
+        batch, seq_len, C, H, W = maze_seq.size()
+        # Process each time step individually using the CNN.
+        maze_seq = maze_seq.view(batch * seq_len, C, H, W)
+        cnn_features = self.maze_cnn(maze_seq)  # (batch * seq_len, cnn_out_dim)
+        cnn_features = cnn_features.view(batch, seq_len, -1)
         constant_features = self.const_net(constants)  # (batch, constant_out_dim)
-        combined_features = torch.cat([cnn_features, constant_features], dim=1)  # (batch, ltc_input_dim)
-        ltc_input = combined_features.unsqueeze(1).repeat(1, seq_len, 1)
-        outputs, _ = self.ltc(ltc_input)
+        # Repeat constant features over the time dimension.
+        constant_features = constant_features.unsqueeze(1).repeat(1, seq_len, 1)
+        combined_features = torch.cat([cnn_features, constant_features], dim=2)  # (batch, seq_len, ltc_input_dim)
+
+        # Assume time_stamps is of shape (batch, seq_len) or (seq_len,). If it has batch dimension,
+        # and if they are identical across the batch, we can simply take the first row.
+        if time_stamps.dim() == 2:
+            time_stamps = time_stamps[0]  # shape: (seq_len,)
+        outputs, _ = self.ltc(combined_features, time_stamps)
         return outputs
 
-####################################
-# 4. Example Usage Putting It All Together
-####################################
+# -------------------------
+#     Dataset Definition
+# -------------------------
 
-if __name__ == '__main__':
-    # Example maze configuration as provided.
-    '''maze_config = [
-        [1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1,0,1],
-        [0,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,1,0,1,0,1],
-        [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1],
-        [1,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
-        [1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1],
-        [1,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1],
-        [1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,0,1,0,1],
-        [1,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,1,0,1,0,1,0,0],
-        [1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1],
-        [1,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,1,0,1,0,1,0,0,0,0,0,0],
-        [1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,1,1],
-        [0,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,0,0,0,0,1,0,0,0,0],
-        [1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1],
-        [0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,1],
-        [1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,1,1],
-        [1,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,1,0,1],
-        [1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,0,1,1,1,0,1],
-        [0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0,0,0,0,0,1],
-        [1,1,1,0,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,1,1,1,1,1,1,0,1],
-        [0,0,1,0,1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],
-        [1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,1,1,1,1],
-        [0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,1],
-        [1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,1,1,1,1],
-        [1,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,1,0,1,0,0,0,1,0,0,0,1],
-        [1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,0,1],
-        [1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,1,0,0,0,0,0,1],
-        [1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1]
-    ]'''
+class MazeDataset(Dataset):
+    def __init__(self, data_list):
+        """
+        data_list: A list where each element is a tuple:
+                   (input_sequence, labels, constants, time_stamps)
+                   - input_sequence: np.array (T, 2, H, W)
+                   - labels: np.array (T, 3)
+                   - constants: np.array (15,)
+                   - time_stamps: np.array (T,) (optional, for reference)
+        """
+        self.data_list = data_list
 
-    data = open('processed_data.pk','ab')
-    import pickle
-    data = pickle.load(data)
+    def __len__(self):
+        return len(self.data_list)
 
-    for inputs_seq, labels_seq, const_arr in data:
-        
-    
-    # Process the maze into a tensor.
-    maze_tensor = process_maze_config(maze_config)  # shape: (1, H, W)
-    # For our network we need a batch dimension. For example, we use batch_size=1.
-    maze_tensor = maze_tensor.unsqueeze(0)  # shape: (1, 1, H, W)
-    
-    # Suppose we also have 15 constant numerical inputs.
-    dummy_constants = torch.randn(1, 15)
-    
+    def __getitem__(self, idx):
+        input_seq, labels, constants, time_stamps = self.data_list[idx]
+        # Convert all to torch tensors.
+        input_seq = torch.tensor(input_seq, dtype=torch.float32)
+        labels = torch.tensor(labels, dtype=torch.float32)
+        constants = torch.tensor(constants, dtype=torch.float32)
+        time_stamps = torch.tensor(time_stamps, dtype=torch.float32)
+        return input_seq, labels, constants, time_stamps
 
+from torch.nn.utils.rnn import pad_sequence
 
-    # Create an instance of MazeSolverNet.
-    net = MazeSolverNet(maze_img_size=64, constant_dim=15, cnn_out_dim=16,
-                        constant_out_dim=3, ltc_hidden_size=32, ltc_output_dim=3)
+def custom_collate(batch):
+    """
+    Custom collate function to handle variable-length sequences.
+    Each item in batch is a tuple: (input_seq, labels, constants, time_stamps)
+    where:
+      - input_seq: Tensor of shape (T, 2, 27, 27)
+      - labels: Tensor of shape (T, 3)
+      - constants: Tensor of shape (15,)
+      - time_stamps: Tensor of shape (T,)
+    This function pads the input_seq, labels, and time_stamps along the time dimension.
+    """
+    input_seqs = [torch.tensor(item[0], dtype=torch.float32) for item in batch]  # List of (T_i, 2, 27, 27)
+    labels = [torch.tensor(item[1], dtype=torch.float32) for item in batch]      # List of (T_i, 3)
+    time_stamps = [torch.tensor(item[3], dtype=torch.float32) for item in batch] # List of (T_i,)
+    constants = [torch.tensor(item[2], dtype=torch.float32) for item in batch]   # List of (15,)
     
-    # Now, assume we have a movement log (as provided).
-    movement_log = [
-        {"direction":"start","valid":True,"time":"2025-02-25T09:39:23.771Z"},
-        {"direction":"Right","valid":True,"time":"2025-02-25T09:39:25.576Z"},
-        {"direction":"Right","valid":True,"time":"2025-02-25T09:39:25.756Z"},
-        {"direction":"Down","valid":True,"time":"2025-02-25T09:39:25.892Z"},
-        {"direction":"Down","valid":True,"time":"2025-02-25T09:39:26.094Z"},
-        {"direction":"Down","valid":False,"time":"2025-02-25T09:39:26.270Z"},
-        {"direction":"Right","valid":True,"time":"2025-02-25T09:39:26.339Z"},
-        # ... (continue for the rest of your log)
-        {"direction":"win","valid":True,"time":"2025-02-25T09:39:35.441Z"}
-    ]
+    # Pad sequences along the time dimension (first dimension).
+    input_seqs_padded = pad_sequence(input_seqs, batch_first=True)   # (batch, T_max, 2, 27, 27)
+    labels_padded = pad_sequence(labels, batch_first=True)           # (batch, T_max, 3)
+    time_stamps_padded = pad_sequence(time_stamps, batch_first=True) # (batch, T_max)
+    constants = torch.stack(constants, dim=0)                        # (batch, 15)
     
-    # Process the movement log.
-    time_steps, labels = process_movement_log(movement_log, time_step=0.03)
-    print("Time steps (in steps):", time_steps)
-    print("Labels shape:", labels.shape)
-    
-    # Suppose for training we want the network to output a sequence that has the same
-    # number of time steps as the valid movement commands. For example:
-    seq_len = labels.shape[0]
-    
-    # Forward pass.
-    outputs = net(maze_tensor, dummy_constants, seq_len=seq_len)
-    print("Network output shape:", outputs.shape)  # Expected: (batch, seq_len, 3)
-    
-    # Here, you could then compute a loss between outputs and your processed labels,
-    # for example using MSELoss or CrossEntropyLoss (with suitable modifications).
+    return input_seqs_padded, labels_padded, constants, time_stamps_padded
+
+# -------------------------
+#      Training Loop
+# -------------------------
+
+import pickle
+train_data_temp = pickle.load(open('Data/processed_data.pk','rb'))
+train_data = []
+for d in train_data_temp:
+    train_data += d
+
+train_dataset = MazeDataset(train_data)
+train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, collate_fn=custom_collate)
+
+# Instantiate the network.
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = MazeSolverNetDynamic(maze_img_size=27, constant_dim=15, cnn_out_dim=16,
+                             constant_out_dim=3, ltc_hidden_size=32, ltc_output_dim=3).to(device)
+
+optimizer = optim.Adam(model.parameters(), lr=1e-3)
+criterion = nn.MSELoss()
+num_epochs = 20
+
+for epoch in range(num_epochs):
+    running_loss = 0.0
+    for batch_idx, (maze_seq, labels, constants, time_stamps) in enumerate(train_loader):
+        # maze_seq: (batch, T, 2, 27, 27)
+        # labels: (batch, T, 3)
+        # constants: (batch, 15)
+        # time_stamps: (batch, T)
+        maze_seq = maze_seq.to(device)
+        labels = labels.to(device)
+        constants = constants.to(device)
+
+        optimizer.zero_grad()
+        outputs = model(maze_seq, constants, time_stamps)
+        print(f'\rforwarded feed {batch_idx}',end='')
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        print('\rbackprop',end='')
+        running_loss += loss.item()
+
+    avg_loss = running_loss / len(train_loader)
+    print(f"\rEpoch {epoch+1}/{num_epochs} Loss: {avg_loss:.4f}")
+
+print("Training complete.")
+torch.save(model, "CT models/maze_solver_full256.pth")
+print("Saved the model.")

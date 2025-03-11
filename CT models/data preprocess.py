@@ -242,7 +242,6 @@ def visualize_processed_data(input_sequence, labels, time_stamps):
 
 # --- Example usage ---
 if __name__ == '__main__':
-    #df = pd.read_excel('D:\Matin\stuff\NSC\data\test export\Single Sheet data.xlsx')
 
     # Example 27x27 maze configuration (for brevity, here we create a dummy maze).
     # In practice, provide your own 27x27 maze (list of lists of 0/1).
@@ -343,6 +342,7 @@ if __name__ == '__main__':
     
     # Example 15 constant inputs (dummy data).
     constants = np.random.randn(15).tolist()
+    
     data = open('Data/saveddata.pk','rb')
     data_load = pickle.load(data)
     data.close()
@@ -358,10 +358,6 @@ if __name__ == '__main__':
 
     with open('Data/processed_data.pk','wb') as data_dump:
         pickle.dump(processed_data, data_dump)
-    
-    #print("Input sequence shape:", inputs_seq.shape)  # (T, 2, 27, 27)
-    #print("Labels sequence shape:", labels_seq.shape)  # (T, 3)
-    #print("Constants shape:", const_arr.shape)         # (15,)
 
     # Visualize the processed data
     visualize_processed_data(inputs_seq, labels_seq, time_stamps)
