@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import pickle as pk
 
 df = pd.read_excel('Data/Single Sheet data.xlsx')
@@ -23,6 +22,3 @@ while True:
 
 with open('Data/saveddata.pk','wb') as f:
   pk.dump(output_data,f)
-
-with open('Data/saveddata.pk','rb') as f:
-  d = pk.load(f)

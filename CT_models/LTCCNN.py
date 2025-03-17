@@ -3,6 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from datetime import datetime
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
+
 
 ####################################
 #  The Neural Network Architecture
@@ -57,24 +60,80 @@ class ConstantsNet(nn.Module):
         return self.net(x)
 
 class LTCCell(nn.Module):
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size, solver_steps=1, max_dt=0.02):
+        """
+        A simple LTC cell updating its hidden state with a configurable time step.
+        If dt is larger than max_dt, multiple Euler ODE steps are taken.
+        
+        Args:
+            input_size: Size of the input.
+            hidden_size: Size of the hidden state.
+            solver_steps: Number of Euler steps per substep.
+            max_dt: Maximum allowed dt per substep.
+        """
         super(LTCCell, self).__init__()
         self.hidden_size = hidden_size
         self.input2hidden = nn.Linear(input_size, hidden_size)
         self.hidden2hidden = nn.Linear(hidden_size, hidden_size)
+
+        # Learnable time constant (tau)
         self.log_tau = nn.Parameter(torch.zeros(hidden_size))
-        self.activation = torch.tanh
+
+        # Number of ODE solver steps per substep.
+        self.solver_steps = solver_steps
+        
+        # Maximum dt allowed per substep.
+        self.max_dt = max_dt
+
+        # Activation function parameters (sigmoid-based gating similar to LTC)
+        self.mu = nn.Parameter(torch.rand(hidden_size))
+        self.sigma = nn.Parameter(torch.rand(hidden_size) * 5)
+
+        # Leak term and capacitance.
+        self.gleak = nn.Parameter(torch.ones(hidden_size))
+        self.cm_t = nn.Parameter(torch.ones(hidden_size))
 
     def forward(self, x, h, dt):
-        tau = F.softplus(self.log_tau) + 1e-3  # ensure tau > 0
-        pre_activation = self.input2hidden(x) + self.hidden2hidden(h)
-        h_new = (1 - dt / tau) * h + (dt / tau) * self.activation(pre_activation)
-        return h_new
+        """
+        Args:
+            x: Input vector.
+            h: Previous hidden state.
+            dt: Total time step to integrate (can be larger than max_dt).
+        Returns:
+            h_new: Updated hidden state after integrating over dt.
+        """
+        tau = F.softplus(self.log_tau) + 1e-3  # Ensure tau > 0
+        input_effect = self.input2hidden(x)
+        
+        # Convert dt to a scalar value if it is a tensor.
+        dt_val = dt.item() if isinstance(dt, torch.Tensor) else dt
+        
+        # Compute number of full steps (each of size max_dt) and the remainder.
+        n_full_steps = int(dt_val // self.max_dt)
+        dt_remainder = dt_val - n_full_steps * self.max_dt
 
+        # First, take full steps using max_dt.
+        for _ in range(n_full_steps * self.solver_steps):
+            pre_activation = input_effect + self.hidden2hidden(h)
+            w_activation = torch.sigmoid((pre_activation - self.mu) * self.sigma)
+            h_update = w_activation * pre_activation
+            h = (1 - self.max_dt / tau) * h + (self.max_dt / (self.cm_t + self.gleak)) * h_update
+
+        # Then, if there is any remaining time, take a final set of steps with dt = dt_remainder.
+        if dt_remainder > 1e-8:
+            for _ in range(self.solver_steps):
+                pre_activation = input_effect + self.hidden2hidden(h)
+                w_activation = torch.sigmoid((pre_activation - self.mu) * self.sigma)
+                h_update = w_activation * pre_activation
+                h = (1 - dt_remainder / tau) * h + (dt_remainder / (self.cm_t + self.gleak)) * h_update
+
+        return h
+    
 class LTC(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(LTC, self).__init__()
         self.hidden_size = hidden_size
+        self.output_size = output_size
         self.cell = LTCCell(input_size, hidden_size)
         self.output_layer = nn.Linear(hidden_size, output_size)
 
@@ -93,6 +152,10 @@ class LTC(nn.Module):
                 dt = time_stamps[t] - time_stamps[t-1]
             # Ensure dt is a tensor of correct type:
             dt = dt if isinstance(dt, torch.Tensor) else torch.tensor(dt, device=x.device, dtype=x.dtype)
+            '''h1 = self.cell(x[:, t, :], h[:,:self.hidden_size], dt=dt)
+            h2 = self.output_layer(h1,h[:,self.hidden_size:], dt=dt)
+            outputs.append(h2.unsqueeze(1))
+            h = torch.cat((h1,h2), dim=1)'''
             h = self.cell(x[:, t, :], h, dt=dt)
             out = self.output_layer(h)
             outputs.append(out.unsqueeze(1))
@@ -102,12 +165,6 @@ class LTC(nn.Module):
 ####################################
 #     Putting It All Together
 ####################################
-
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-
 # Assume MazeCNN, ConstantsNet, LTCCell, and LTC are defined as before.
 # For dynamic input, the MazeCNN is now used on a sequence of images with 2 channels.
 
@@ -125,9 +182,11 @@ class MazeSolverNetDynamic(nn.Module):
         self.maze_cnn = MazeCNN(output_features=cnn_out_dim, input_channels=2, img_size=maze_img_size)
         self.const_net = ConstantsNet(input_dim=constant_dim, output_dim=constant_out_dim)
         self.ltc_input_dim = cnn_out_dim + constant_out_dim
-        self.ltc = LTC(input_size=self.ltc_input_dim, hidden_size=ltc_hidden_size, output_size=ltc_output_dim)
+        self.ltc = LTC(input_size=self.ltc_input_dim, hidden_size=ltc_hidden_size, output_size=ltc_hidden_size)
+        self.ltc2 = LTC(input_size=ltc_hidden_size, hidden_size=ltc_hidden_size, output_size=ltc_output_dim)
+        self.tanh = nn.Tanh()
 
-    def forward(self, maze_seq, constants, time_stamps):
+    def forward(self, maze_seq, constants, time_stamps, h1=None, h2=None):
         """
         Args:
             maze_seq: Tensor of shape (batch, seq_len, 2, H, W)
@@ -150,8 +209,10 @@ class MazeSolverNetDynamic(nn.Module):
         # and if they are identical across the batch, we can simply take the first row.
         if time_stamps.dim() == 2:
             time_stamps = time_stamps[0]  # shape: (seq_len,)
-        outputs, _ = self.ltc(combined_features, time_stamps)
-        return outputs
+        outputs, h_1 = self.ltc(combined_features, time_stamps, h1)
+        outputs, h_2 = self.ltc2(outputs, time_stamps, h2)
+        outputs = self.tanh(outputs)
+        return outputs, h_1, h_2
 
 # -------------------------
 #     Dataset Definition
@@ -206,52 +267,3 @@ def custom_collate(batch):
     constants = torch.stack(constants, dim=0)                        # (batch, 15)
     
     return input_seqs_padded, labels_padded, constants, time_stamps_padded
-
-# -------------------------
-#      Training Loop
-# -------------------------
-
-import pickle
-train_data_temp = pickle.load(open('Data/processed_data.pk','rb'))
-train_data = []
-for d in train_data_temp:
-    train_data += d
-
-train_dataset = MazeDataset(train_data)
-train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, collate_fn=custom_collate)
-
-# Instantiate the network.
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = MazeSolverNetDynamic(maze_img_size=27, constant_dim=15, cnn_out_dim=16,
-                             constant_out_dim=3, ltc_hidden_size=32, ltc_output_dim=3).to(device)
-
-optimizer = optim.Adam(model.parameters(), lr=1e-3)
-criterion = nn.MSELoss()
-num_epochs = 20
-
-for epoch in range(num_epochs):
-    running_loss = 0.0
-    for batch_idx, (maze_seq, labels, constants, time_stamps) in enumerate(train_loader):
-        # maze_seq: (batch, T, 2, 27, 27)
-        # labels: (batch, T, 3)
-        # constants: (batch, 15)
-        # time_stamps: (batch, T)
-        maze_seq = maze_seq.to(device)
-        labels = labels.to(device)
-        constants = constants.to(device)
-
-        optimizer.zero_grad()
-        outputs = model(maze_seq, constants, time_stamps)
-        print(f'\rforwarded feed {batch_idx}',end='')
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        print('\rbackprop',end='')
-        running_loss += loss.item()
-
-    avg_loss = running_loss / len(train_loader)
-    print(f"\rEpoch {epoch+1}/{num_epochs} Loss: {avg_loss:.4f}")
-
-print("Training complete.")
-torch.save(model, "CT models/maze_solver_full256.pth")
-print("Saved the model.")
